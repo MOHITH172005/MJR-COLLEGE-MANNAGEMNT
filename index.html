@@ -1,0 +1,1122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MJRCET College Management - Full App</title>
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- html2canvas, qrcode, jspdf -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <style>
+    #splash {
+      position: fixed; top:0; left:0; width:100%; height:100%;
+      background: linear-gradient(to right,#7e22ce,#4f46e5);
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      z-index:50; transition:opacity 0.5s ease;
+    }
+    #progress-bar { width:250px; height:8px; background:#ddd; border-radius:9999px; overflow:hidden; margin-top:20px;}
+    #progress { height:100%; width:0%; background:#22c55e; transition:width 0.2s;}
+    .toast { position: fixed; right: 20px; bottom: 20px; z-index:9999; }
+    img.thumb { width:48px; height:48px; object-fit:cover; border-radius:6px; }
+    .small-muted { font-size:0.85rem; color:#6b7280; }
+    #idCardTemplate { width: 540px; height: 340px; background: white; border-radius:12px; padding:20px; box-sizing:border-box; display:none; }
+    /* simple modal centering */
+    .modal { position: fixed; inset:0; display:none; align-items:center; justify-content:center; background: rgba(0,0,0,0.4); z-index:60; }
+    .modal.active { display:flex; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+<!-- Splash -->
+<div id="splash">
+  <div class="bg-white rounded-3xl shadow-2xl p-6 flex items-center justify-center">
+    <img src="mjrcet.jpg" alt="MJRCET Logo" class="w-48 h-48 object-contain" onerror="this.style.display='none'">
+  </div>
+  <div id="progress-bar"><div id="progress"></div></div>
+  <h1 class="text-white text-2xl font-bold mt-6">WELCOME TO MJR COLLEGE OF ENGINEERING AND TECHNOLOGY</h1>
+</div>
+
+<!-- toast container -->
+<div id="toastContainer" class="toast"></div>
+
+<!-- Login -->
+<div id="loginScreen" class="hidden min-h-screen flex items-center justify-center p-4">
+  <div class="bg-white shadow-2xl rounded-3xl p-10 w-full max-w-md">
+    <h1 class="text-3xl font-bold text-center text-purple-700 mb-6">MJRCET Login</h1>
+
+    <label class="text-sm font-medium text-gray-600">Login As</label>
+    <select id="userType" class="w-full border rounded-lg px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-purple-500">
+      <option value="admin">Admin</option>
+      <option value="teacher">Teacher</option>
+      <option value="student">Student</option>
+    </select>
+
+    <input id="username" type="text" placeholder="Username / Mobile / Roll" class="w-full border rounded-lg px-3 py-2 mb-3"/>
+    <input id="password" type="password" placeholder="Password / OTP" class="w-full border rounded-lg px-3 py-2 mb-4"/>
+
+    <div class="flex gap-3">
+      <button onclick="login()" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 rounded-lg">Login</button>
+      <button onclick="seedSampleData()" class="bg-gray-200 px-4 py-2 rounded-lg">Seed Sample</button>
+    </div>
+
+    <p class="text-sm text-gray-500 mt-4">Demo credentials: use Seed Sample then Login as Teacher (mobile) or Student (roll).</p>
+  </div>
+</div>
+
+<!-- Admin Dashboard -->
+<div id="adminDashboard" class="hidden min-h-screen flex">
+  <!-- Sidebar -->
+  <aside class="w-72 bg-purple-700 text-white flex flex-col">
+    <div class="p-6 border-b border-purple-600 text-center">
+      <img src="mjrcet.jpg" alt="logo" class="mx-auto w-24 h-24 object-contain rounded-full bg-white p-2" onerror="this.style.display='none'"/>
+      <h2 id="adminName" class="text-xl font-bold mt-2">MJRCET Admin</h2>
+    </div>
+    <nav class="p-6 space-y-3 flex-1">
+      <button onclick="showTab('dashboard')" id="dashboardTab" class="w-full text-left px-4 py-2 bg-purple-600 rounded-lg hover:bg-purple-800">Dashboard</button>
+      <button onclick="showTab('teacher')" id="teacherTab" class="w-full text-left px-4 py-2 hover:bg-purple-800 rounded-lg">Add Teacher</button>
+      <button onclick="showTab('student')" id="studentTab" class="w-full text-left px-4 py-2 hover:bg-purple-800 rounded-lg">Add Student</button>
+      <button onclick="showTab('edit')" id="editTab" class="w-full text-left px-4 py-2 hover:bg-purple-800 rounded-lg">Manage / Edit</button>
+      <button onclick="showTab('approve')" id="approveTab" class="w-full text-left px-4 py-2 hover:bg-purple-800 rounded-lg">Approve Requests</button>
+      <button onclick="showTab('smslog')" id="smsTab" class="w-full text-left px-4 py-2 hover:bg-purple-800 rounded-lg">SMS Log</button>
+      <button onclick="showTab('attendance')" id="attendanceTab" class="w-full text-left px-4 py-2 hover:bg-purple-800 rounded-lg">Attendance Report</button>
+      <button onclick="logout()" class="w-full text-left px-4 py-2 bg-red-600 hover:bg-red-800 rounded-lg mt-6">Logout</button>
+    </nav>
+    <div class="p-4 text-sm text-purple-200 border-t border-purple-600">Build: MJRCET · Local demo</div>
+  </aside>
+
+  <!-- Main -->
+  <main class="flex-1 p-8 overflow-auto">
+    <!-- Dashboard -->
+    <section id="dashboard" class="mb-8">
+      <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-purple-700">Admin Dashboard</h1>
+        <div class="flex gap-3">
+          <input id="globalSearch" onkeyup="renderEdit()" placeholder="Quick search..." class="border rounded-lg px-3 py-2 w-64"/>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+        <div class="bg-white shadow rounded-lg p-4">
+          <div class="text-sm font-medium text-gray-500">Total Teachers</div>
+          <div id="totalTeachers" class="text-2xl font-bold text-purple-700 mt-2">0</div>
+        </div>
+        <div class="bg-white shadow rounded-lg p-4">
+          <div class="text-sm font-medium text-gray-500">Total Students</div>
+          <div id="totalStudents" class="text-2xl font-bold text-purple-700 mt-2">0</div>
+        </div>
+        <div class="bg-white shadow rounded-lg p-4">
+          <div class="text-sm font-medium text-gray-500">Pending Requests</div>
+          <div id="totalRequests" class="text-2xl font-bold text-purple-700 mt-2">0</div>
+        </div>
+        <div class="bg-white shadow rounded-lg p-4">
+          <div class="text-sm font-medium text-gray-500">SMS Sent</div>
+          <div id="smsCount" class="text-2xl font-bold text-purple-700 mt-2">0</div>
+        </div>
+      </div>
+      <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="font-semibold text-lg text-gray-700 mb-3">Quick Actions</h3>
+        <div class="flex gap-3">
+          <button onclick="showTab('teacher')" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded">Add Teacher</button>
+          <button onclick="showTab('student')" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded">Add Student</button>
+          <button onclick="exportAllData()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">Download All Data</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Add Teacher -->
+    <section id="teacher" class="hidden">
+      <div class="bg-white shadow-2xl rounded-3xl p-8 max-w-4xl mx-auto">
+        <h2 class="text-3xl font-bold text-purple-700 mb-6 text-center">Add Teacher</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Full Name *</label>
+            <input id="teacherName" placeholder="Enter full name" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Gender *</label>
+            <select id="teacherGender" class="w-full border rounded-xl px-4 py-3">
+              <option value="">Select Gender</option><option>Male</option><option>Female</option><option>Other</option>
+            </select>
+          </div>
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Date of Birth *</label>
+            <input type="date" id="teacherDOB" class="w-full border rounded-xl px-4 py-3"/>
+            <p class="small-muted mt-1">DOB used to generate password (format DDMMYYYY).</p>
+          </div>
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Mobile Number *</label>
+            <input id="teacherMobile" placeholder="Enter mobile number (+91 or 10-digit)" class="w-full border rounded-xl px-4 py-3"/>
+            <p class="small-muted mt-1">Username defaults to this mobile number (without +91).</p>
+          </div>
+
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Email ID</label>
+            <input id="teacherEmail" placeholder="Enter email ID" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="block mb-1 font-medium text-gray-600">Address</label>
+            <input id="teacherAddress" placeholder="Enter address" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Employee ID / Staff ID *</label>
+            <input id="teacherEmpID" placeholder="Enter unique staff ID" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Department *</label>
+            <select id="teacherDepartment" class="w-full border rounded-xl px-4 py-3">
+              <option value="">Select Department</option>
+              <option value="CSE">CSE</option><option value="ECE">ECE</option><option value="EEE">EEE</option>
+              <option value="CIVIL">CIVIL</option><option value="MECH">MECH</option><option value="IT">IT</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Designation / Role</label>
+            <input id="teacherDesignation" placeholder="e.g., Assistant Professor" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Qualification</label>
+            <input id="teacherQualification" placeholder="e.g., M.Tech, Ph.D" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Experience (in years)</label>
+            <input type="number" min="0" id="teacherExperience" placeholder="Years" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="block mb-1 font-medium text-gray-600">Subjects Handled / Specialization</label>
+            <input id="teacherSubjects" placeholder="e.g., DBMS, OS" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Date of Joining</label>
+            <input type="date" id="teacherDOJ" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">HOD / Incharge</label>
+            <div class="flex items-center gap-3">
+              <input type="checkbox" id="teacherHOD" class="h-4 w-4"><label class="text-sm">Is HOD / Incharge</label>
+            </div>
+          </div>
+
+          <div class="md:col-span-2 mt-2"><h3 class="text-md font-semibold text-purple-700">Account Details (auto)</h3></div>
+
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Username</label>
+            <input id="teacherUsername" placeholder="Will default to mobile number" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Password (auto-generated)</label>
+            <input id="teacherPassword" readonly class="w-full border rounded-xl px-4 py-3 bg-gray-100"/>
+            <p class="small-muted mt-1">Auto: DOB (DDMMYYYY) + DEPT (uppercase). Example: 17052005CSE</p>
+          </div>
+
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Aadhaar Number</label>
+            <input id="teacherAadhaar" placeholder="Optional" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">PAN Number</label>
+            <input id="teacherPAN" placeholder="Optional" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="block mb-1 font-medium text-gray-600">Bank Details</label>
+            <input id="teacherBank" placeholder="Optional" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="block mb-1 font-medium text-gray-600">Emergency Contact</label>
+            <input id="teacherEmergency" placeholder="Emergency contact number" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="block mb-1 font-medium text-gray-600">Upload Photo</label>
+            <div class="flex items-center gap-3">
+              <input type="file" id="teacherPhoto" accept="image/*" class="w-full border rounded-xl px-4 py-2"/>
+              <img id="teacherPhotoPreview" class="thumb" src="" alt="preview" style="display:none"/>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="mt-6 text-center">
+          <button onclick="addTeacher()" id="teacherSubmitBtn" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-2xl font-semibold">Submit</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Add Student -->
+    <section id="student" class="hidden">
+      <div class="bg-white shadow-2xl rounded-3xl p-8 max-w-3xl mx-auto">
+        <h2 class="text-3xl font-bold text-purple-700 mb-6 text-center">Add Student</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Full Name *</label>
+            <input id="studentName" placeholder="Enter full name" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Roll Number *</label>
+            <input id="studentRoll" placeholder="Enter roll number" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Course *</label>
+            <select id="studentCourse" onchange="updateBranchOptions(); computeAndSetYear()" class="w-full border rounded-xl px-4 py-3">
+              <option value="">Select Course</option><option value="BTECH">B.Tech</option><option value="MBA">MBA</option><option value="DIPLOMA">Diploma</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Branch *</label>
+            <select id="studentBranch" class="w-full border rounded-xl px-4 py-3"><option value="">Select Branch</option></select>
+          </div>
+
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Admission Year *</label>
+            <input id="studentAdmissionYear" type="number" min="2000" max="2100" placeholder="YYYY" class="w-full border rounded-xl px-4 py-3" onchange="computeAndSetYear()"/>
+          </div>
+
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Year *</label>
+            <select id="studentYear" class="w-full border rounded-xl px-4 py-3">
+              <option value="">Select Year</option><option value="1st Year">1st Year</option><option value="2nd Year">2nd Year</option><option value="3rd Year">3rd Year</option><option value="4th Year">4th Year</option><option value="Alumni">Alumni</option>
+            </select>
+            <p id="yearNote" class="text-sm text-gray-500 mt-1">For B.Tech: year is auto-calculated from Admission Year.</p>
+          </div>
+
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Class *</label>
+            <input id="studentClass" placeholder="Enter class (e.g., I, II)" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Date of Birth *</label>
+            <input type="date" id="studentDOB" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Mobile Number</label>
+            <input id="studentMobile" placeholder="Enter mobile number" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Email</label>
+            <input id="studentEmail" placeholder="Enter email" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="block mb-1 font-medium text-gray-600">Address</label>
+            <input id="studentAddress" placeholder="Enter address" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="block mb-1 font-medium text-gray-600">Upload Photo</label>
+            <div class="flex items-center gap-3">
+              <input type="file" id="studentPhoto" accept="image/*" class="w-full border rounded-xl px-4 py-2"/>
+              <img id="studentPhotoPreview" class="thumb" src="" alt="preview" style="display:none"/>
+            </div>
+          </div>
+
+        </div>
+        <div class="mt-6 text-center">
+          <button onclick="addStudent()" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-2xl font-semibold">Submit</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Manage / Edit -->
+    <section id="edit" class="hidden">
+      <div class="bg-white shadow rounded-xl p-6 max-w-6xl mx-auto">
+        <h2 class="text-2xl font-bold text-purple-700 mb-4">Manage / Edit</h2>
+        <div id="editContainer" class="space-y-2"></div>
+        <div class="mt-4">
+          <button onclick="exportAllData()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">Export All Data</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Approve Requests (enhanced) -->
+    <section id="approve" class="hidden">
+      <div class="bg-white shadow rounded-xl p-6">
+        <h2 class="text-2xl font-bold text-purple-700 mb-4">Approve Requests</h2>
+
+        <div class="flex gap-2 mb-4">
+          <button id="filterAll" onclick="setRequestFilter('All')" class="px-3 py-1 rounded bg-gray-200">All</button>
+          <button id="filterStudent" onclick="setRequestFilter('Student')" class="px-3 py-1 rounded">Students</button>
+          <button id="filterTeacher" onclick="setRequestFilter('Teacher')" class="px-3 py-1 rounded">Teachers</button>
+        </div>
+
+        <div id="requestsContainer"></div>
+      </div>
+    </section>
+
+    <section id="smslog" class="hidden">
+      <div class="bg-white shadow rounded-xl p-6">
+        <h2 class="text-2xl font-bold text-purple-700 mb-4">SMS Log</h2>
+        <div id="smsContainer"></div>
+      </div>
+    </section>
+
+    <section id="attendance" class="hidden">
+      <div class="bg-white shadow rounded-xl p-6">
+        <h2 class="text-2xl font-bold text-purple-700 mb-4">Attendance Report</h2>
+        <div class="mb-4">
+          <label class="text-sm text-gray-600">Select Class</label>
+          <select id="attendanceClass" onchange="renderAttendanceTable()" class="border rounded px-3 py-2">
+            <option value="">All</option><option value="I">I</option><option value="II">II</option><option value="III">III</option><option value="IV">IV</option>
+          </select>
+        </div>
+        <table class="w-full border rounded">
+          <thead class="bg-gray-100">
+            <tr><th class="border px-3 py-2 text-left">Roll</th><th class="border px-3 py-2 text-left">Name</th><th class="border px-3 py-2 text-center">Present</th></tr>
+          </thead>
+          <tbody id="attendanceTable"></tbody>
+        </table>
+        <div class="mt-4 flex gap-3">
+          <button onclick="downloadAttendanceReport()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">Download Report</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Teacher Dashboard -->
+    <section id="teacherDashboard" class="hidden">
+      <div class="bg-white p-6 rounded shadow max-w-4xl mx-auto">
+        <h2 class="text-2xl font-bold text-purple-700 mb-4">Teacher Dashboard</h2>
+        <div id="teacherWelcome" class="mb-4 text-gray-700"></div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div class="p-4 border rounded">
+            <div class="flex justify-between items-center mb-2">
+              <div class="font-semibold">My Leave Requests</div>
+              <button onclick="openTeacherRequestModal()" class="text-sm bg-purple-600 text-white px-3 py-1 rounded">Request Leave</button>
+            </div>
+            <div id="teacherMyRequestsList" class="space-y-2"></div>
+          </div>
+
+          <div class="p-4 border rounded">
+            <div class="flex justify-between items-center mb-2">
+              <div class="font-semibold">Student Leave Requests</div>
+            </div>
+            <div id="teacherRequestsList" class="space-y-2"></div>
+          </div>
+        </div>
+
+        <div class="space-y-3"><div class="p-4 border rounded">Profile & classes: (demo)</div></div>
+        <div class="mt-4"><button onclick="logoutTeacher()" class="bg-red-600 px-4 py-2 text-white rounded">Logout</button></div>
+      </div>
+    </section>
+
+    <!-- Student Dashboard (simple) -->
+    <section id="studentDashboard" class="hidden">
+      <div class="bg-white p-6 rounded shadow max-w-3xl mx-auto">
+        <h2 class="text-2xl font-bold text-purple-700 mb-4">Student Dashboard</h2>
+        <div id="studentWelcome" class="mb-4 text-gray-700"></div>
+
+        <div class="p-4 border rounded mb-4">
+          <div class="flex justify-between items-center mb-2">
+            <div class="font-semibold">Requests</div>
+            <button onclick="openStudentRequestModal()" class="text-sm bg-purple-600 text-white px-3 py-1 rounded">Request Leave</button>
+          </div>
+          <div id="studentRequestsList" class="space-y-2"></div>
+        </div>
+
+        <div class="p-4 border rounded">
+          <div class="font-semibold mb-2">Profile</div>
+          <div id="studentProfileInfo" class="text-sm text-gray-600"></div>
+        </div>
+
+        <div class="mt-4"><button onclick="logoutTeacher()" class="bg-red-600 px-4 py-2 text-white rounded">Logout</button></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Hidden modal for editing teacher/student -->
+<div id="editModal" class="modal">
+  <div class="bg-white rounded-xl p-6 w-full max-w-2xl">
+    <h3 id="editModalTitle" class="text-xl font-semibold text-purple-700 mb-4">Edit</h3>
+    <div id="editModalBody" class="space-y-3"></div>
+    <div class="flex justify-end gap-3 mt-4">
+      <button onclick="closeEditModal()" class="px-4 py-2 rounded bg-gray-200">Cancel</button>
+      <button id="saveEditBtn" onclick="saveEdit()" class="px-4 py-2 rounded bg-purple-600 text-white">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Student Request Modal -->
+<div id="studentRequestModal" class="modal">
+  <div class="bg-white rounded-xl p-6 w-full max-w-md">
+    <h3 class="text-lg font-semibold text-purple-700 mb-3">Student Leave Request</h3>
+    <div>
+      <label class="text-sm">Reason</label>
+      <textarea id="studentRequestReason" class="w-full border rounded px-3 py-2" rows="4" placeholder="Reason for leaving (e.g., go home due to family emergency)"></textarea>
+    </div>
+    <div class="flex justify-end gap-3 mt-4">
+      <button onclick="closeStudentRequestModal()" class="px-4 py-2 rounded bg-gray-200">Cancel</button>
+      <button onclick="submitStudentRequest()" class="px-4 py-2 rounded bg-purple-600 text-white">Submit Request</button>
+    </div>
+  </div>
+</div>
+
+<!-- Teacher Request Modal -->
+<div id="teacherRequestModal" class="modal">
+  <div class="bg-white rounded-xl p-6 w-full max-w-md">
+    <h3 class="text-lg font-semibold text-purple-700 mb-3">Teacher Leave Request</h3>
+    <div>
+      <label class="text-sm">Reason</label>
+      <textarea id="teacherRequestReason" class="w-full border rounded px-3 py-2" rows="4" placeholder="Reason for leave"></textarea>
+    </div>
+    <div class="flex justify-end gap-3 mt-4">
+      <button onclick="closeTeacherRequestModal()" class="px-4 py-2 rounded bg-gray-200">Cancel</button>
+      <button onclick="submitTeacherRequest()" class="px-4 py-2 rounded bg-purple-600 text-white">Submit Request</button>
+    </div>
+  </div>
+</div>
+
+<!-- Hidden ID Card template (rendered by html2canvas) -->
+<div id="idCardTemplate"></div>
+
+<script>
+/* ========== Splash ========== */
+let progress=0;
+const splash=document.getElementById('splash');
+const loginScreen=document.getElementById('loginScreen');
+const progressBar=document.getElementById('progress');
+let splashInterval=setInterval(()=>{
+  progress+=1;
+  progressBar.style.width=progress+'%';
+  if(progress>=100){clearInterval(splashInterval); splash.style.opacity=0; setTimeout(()=>{splash.style.display='none'; loginScreen.classList.remove('hidden');},500);}
+},15);
+
+/* ===== Toast ===== */
+function toast(msg,bg='bg-purple-600'){
+  const t=document.createElement('div');
+  t.className=`${bg} text-white px-4 py-2 rounded shadow mb-2`;
+  t.innerText=msg;
+  document.getElementById('toastContainer').appendChild(t);
+  setTimeout(()=>t.remove(),3000);
+}
+
+/* ===== Persistence ===== */
+const STORAGE_KEY = 'mjrcet_data_v2';
+function saveToStorage(){ localStorage.setItem(STORAGE_KEY, JSON.stringify({teachers,students,requests,smsLogs})); }
+function loadFromStorage(){
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if(!raw) return false;
+  try{
+    const obj = JSON.parse(raw);
+    teachers = obj.teachers || [];
+    students = obj.students || [];
+    requests = obj.requests || [];
+    smsLogs = obj.smsLogs || [];
+    return true;
+  }catch(e){ console.error(e); return false; }
+}
+
+/* ===== Data arrays ===== */
+let teachers=[], students=[], requests=[], smsLogs=[];
+
+/* Current UI / login context */
+let currentUserRole = 'Admin'; // Admin, Teacher, Student
+let currentUserName = 'Admin';
+let currentRequestFilter = 'All';
+
+/* ===== Branch lists ===== */
+const branchLists = {
+  BTECH: ["Computer Science and Engineering (CSE)","Electronics and Communication Engineering (ECE)","Electrical and Electronics Engineering (EEE)","Mechanical Engineering (ME)","Civil Engineering (CE)","Information Technology (IT)"],
+  MBA: ["Finance","Marketing","Human Resources (HR)","Operations Management","Information Technology (IT)","Business Analytics"],
+  DIPLOMA: ["Computer Engineering","Electronics and Communication Engineering (ECE)","Electrical Engineering","Mechanical Engineering","Civil Engineering"]
+};
+
+/* Helpers */
+function currentAcademicYearStart(){ const now=new Date(), y=now.getFullYear(), m=now.getMonth()+1; return (m>=6)?y:y-1; }
+function yearNumberToLabel(n){ if(n<=0) return 'Not Enrolled'; if(n===1) return '1st Year'; if(n===2) return '2nd Year'; if(n===3) return '3rd Year'; return '4th Year'; }
+function normalizeMobile(m){ if(!m) return ''; return m.toString().replace(/\s+/g,'').replace(/^\+91/,'').replace(/^0+/,''); }
+
+/* Photo handling */
+function fileToBase64(file, cb){
+  const reader = new FileReader();
+  reader.onload = e => cb(e.target.result);
+  reader.onerror = () => cb(null);
+  reader.readAsDataURL(file);
+}
+document.getElementById('studentPhoto').addEventListener('change', (e)=>{
+  const f = e.target.files[0], prev=document.getElementById('studentPhotoPreview');
+  if(!f){ prev.style.display='none'; prev.src=''; return; }
+  fileToBase64(f, dataUrl => { if(dataUrl){ prev.src=dataUrl; prev.style.display='block'; prev.dataset.base64=dataUrl; }});
+});
+document.getElementById('teacherPhoto').addEventListener('change', (e)=>{
+  const f = e.target.files[0], prev=document.getElementById('teacherPhotoPreview');
+  if(!f){ prev.style.display='none'; prev.src=''; return; }
+  fileToBase64(f, dataUrl => { if(dataUrl){ prev.src=dataUrl; prev.style.display='block'; prev.dataset.base64=dataUrl; }});
+});
+
+/* Load storage */
+if(!loadFromStorage()){
+  teachers=[]; students=[]; requests=[]; smsLogs=[];
+}
+
+/* Seed sample */
+function seedSampleData(){
+  teachers=[{
+    name:'Valasareddy Mohith Kumar Reddy', gender:'Male', dob:'2005-01-01', mobile:'9876543210', email:'mohith@example.com',
+    address:'Hyderabad', empID:'EMP001', department:'CSE', desig:'Assistant Professor', qualification:'M.Tech', experience:'2',
+    subjects:'DBMS, OS', doj:'2023-06-01', isHOD:false, aadhaar:'', pan:'', bank:'', emergency:'9876500000', photo:null,
+    username:'9876543210', password:generatePasswordFromDobAndDept('2005-01-01','CSE')
+  }];
+  students=[{roll:'101', name:'Mohith Kumar', class:'I', dob:'2005-01-01', course:'BTECH', branch:'Computer Science and Engineering (CSE)', admissionYear:2023, year:'1st Year', mobile:'9876500000', email:'mohith@example.com', address:'Hyderabad', photo:null}];
+  requests=[{ id: Date.now()-10000, name:'Mohith Kumar', type:'Student', purpose:'Going home for family emergency', status:'Pending', approver:'', requestedBy:'Student', timestamp: new Date().toLocaleString(), requesterId: '101' }];
+  smsLogs=[{id:1,to:'9876543210',msg:'Welcome to MJRCET',time:new Date().toLocaleString()}];
+  saveToStorage(); renderDashboard(); renderEdit(); renderAttendanceTable(); renderSMS(); renderRequestsInitial(); toast('Sample data loaded','bg-green-600');
+}
+
+/* Login */
+function login(){
+  const type=document.getElementById('userType').value;
+  const user=document.getElementById('username').value.trim();
+  const pass=document.getElementById('password').value.trim();
+  if(!user || !pass){ toast('Enter username & password','bg-red-600'); return; }
+  if(type==='admin'){ loginAsAdmin(); return; }
+  if(type==='teacher'){
+    const normalized=normalizeMobile(user);
+    const t = teachers.find(x => normalizeMobile(x.username||x.mobile) === normalized);
+    if(!t){ toast('Teacher not found','bg-red-600'); return; }
+    if(t.password === pass){ loginAsTeacher(t); } else { toast('Invalid credentials','bg-red-600'); }
+    return;
+  }
+  if(type==='student'){
+    const s = students.find(x => (x.roll||'')===user || (x.mobile||'')===normalizeMobile(user));
+    if(s){ loginAsStudent(s); } else { toast('Student not found','bg-red-600'); }
+    return;
+  }
+}
+
+function loginAsAdmin(){ currentUserRole='Admin'; currentUserName='Admin'; loginScreen.classList.add('hidden'); document.getElementById('adminDashboard').classList.remove('hidden'); showTab('dashboard'); renderDashboard(); renderRequestsInitial(); toast('Admin logged in','bg-green-600'); }
+function loginAsTeacher(t){ currentUserRole='Teacher'; currentUserName=t.name||t.empID; loginScreen.classList.add('hidden'); document.getElementById('adminDashboard').classList.add('hidden'); document.getElementById('teacherDashboard').classList.remove('hidden'); document.getElementById('teacherWelcome').innerHTML=`<div class="text-lg font-medium">Welcome, ${t.name}</div><div class="text-sm text-gray-600">Department: ${t.department}</div>`; sessionStorage.setItem('loggedInTeacher',JSON.stringify(t)); renderTeacherRequests(); renderTeacherMyRequests(); toast('Teacher logged in','bg-green-600'); }
+function loginAsStudent(s){ currentUserRole='Student'; currentUserName=s.name||s.roll; loginScreen.classList.add('hidden'); document.getElementById('adminDashboard').classList.add('hidden'); document.getElementById('studentDashboard').classList.remove('hidden'); document.getElementById('studentWelcome').innerHTML=`<div class="text-lg font-medium">Welcome, ${s.name}</div><div class="text-sm text-gray-600">Roll: ${s.roll}</div>`; sessionStorage.setItem('loggedInStudent',JSON.stringify(s)); renderStudentRequests(); toast('Student logged in (demo)','bg-green-600'); }
+
+function logout(){ sessionStorage.removeItem('loggedInTeacher'); sessionStorage.removeItem('loggedInStudent'); document.getElementById('adminDashboard').classList.add('hidden'); document.getElementById('teacherDashboard').classList.add('hidden'); document.getElementById('studentDashboard').classList.add('hidden'); loginScreen.classList.remove('hidden'); currentUserRole='Admin'; currentUserName='Admin'; toast('Logged out','bg-green-600'); }
+function logoutTeacher(){ logout(); }
+
+/* Render Dashboard */
+function renderDashboard(){ document.getElementById('totalTeachers').innerText = teachers.length; document.getElementById('totalStudents').innerText = students.length; document.getElementById('totalRequests').innerText = requests.filter(r=>r.status==='Pending').length; document.getElementById('smsCount').innerText = smsLogs.length; }
+
+/* Tabs */
+function showTab(tab){ ['dashboard','teacher','student','edit','approve','smslog','attendance'].forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.add('hidden'); }); ['dashboardTab','teacherTab','studentTab','editTab','approveTab','smsTab','attendanceTab'].forEach(id=>{ const el=document.getElementById(id); if(el && el.classList) el.classList.remove('bg-purple-600'); }); if(document.getElementById(tab)) document.getElementById(tab).classList.remove('hidden'); if(document.getElementById(tab+'Tab')) document.getElementById(tab+'Tab').classList.add('bg-purple-600'); if(tab==='attendance') renderAttendanceTable(); renderDashboard(); }
+
+/* Password generation */
+function generatePasswordFromDobAndDept(dobStr, dept){
+  if(!dobStr || !dept) return '';
+  const parts = dobStr.split('-'); if(parts.length !== 3) return '';
+  const dd = parts[2].padStart(2,'0'); const mm = parts[1].padStart(2,'0'); const yyyy = parts[0];
+  return `${dd}${mm}${yyyy}${dept.toUpperCase()}`;
+}
+
+/* ===== Add Teacher ===== */
+function addTeacher(){
+  const photoData = document.getElementById('teacherPhotoPreview').dataset.base64 || null;
+  const name = document.getElementById('teacherName').value.trim();
+  const gender = document.getElementById('teacherGender').value;
+  const dob = document.getElementById('teacherDOB').value;
+  const mobileRaw = document.getElementById('teacherMobile').value.trim();
+  const email = document.getElementById('teacherEmail').value.trim();
+  const address = document.getElementById('teacherAddress').value.trim();
+  const empID = document.getElementById('teacherEmpID').value.trim();
+  const dept = document.getElementById('teacherDepartment').value;
+  const desig = document.getElementById('teacherDesignation').value.trim();
+  const qual = document.getElementById('teacherQualification').value.trim();
+  const exp = document.getElementById('teacherExperience').value.trim();
+  const subj = document.getElementById('teacherSubjects').value.trim();
+  const doj = document.getElementById('teacherDOJ').value;
+  const isHOD = document.getElementById('teacherHOD').checked;
+  const aadhaar = document.getElementById('teacherAadhaar').value.trim();
+  const pan = document.getElementById('teacherPAN').value.trim();
+  const bank = document.getElementById('teacherBank').value.trim();
+  const emergency = document.getElementById('teacherEmergency').value.trim();
+  let username = document.getElementById('teacherUsername').value.trim();
+
+  if(!name || !dob || !mobileRaw || !dept || !empID){ toast('Please fill required fields: Name, DOB, Mobile, Department, EmpID','bg-red-600'); return; }
+
+  let mobile = normalizeMobile(mobileRaw);
+  if(!/^\d{10}$/.test(mobile)){ toast('Enter a valid 10-digit mobile number','bg-red-600'); return; }
+  if(!username) username = mobile;
+  const password = generatePasswordFromDobAndDept(dob, dept);
+
+  if(teachers.some(t => (t.empID||'') === empID)){ toast('Employee ID already exists','bg-red-600'); return; }
+  if(teachers.some(t => normalizeMobile(t.username||t.mobile) === mobile)){ toast('Teacher with this mobile already exists','bg-red-600'); return; }
+
+  const teacher = { name, gender, dob, mobile, email, address, empID, department:dept, desig, qualification:qual, experience:exp, subjects:subj, doj, isHOD, aadhaar, pan, bank, emergency, username, password, photo: photoData };
+  teachers.push(teacher); saveToStorage(); toast('Teacher added and credentials created','bg-green-600'); clearTeacherForm(); renderDashboard(); renderEdit();
+}
+function clearTeacherForm(){ ['teacherName','teacherGender','teacherDOB','teacherMobile','teacherEmail','teacherAddress','teacherEmpID','teacherDepartment','teacherDesignation','teacherQualification','teacherExperience','teacherSubjects','teacherDOJ','teacherUsername','teacherPassword','teacherAadhaar','teacherPAN','teacherBank','teacherEmergency'].forEach(id=>{ if(document.getElementById(id)) document.getElementById(id).value=''; }); document.getElementById('teacherHOD').checked=false; document.getElementById('teacherPhoto').value=''; const prev=document.getElementById('teacherPhotoPreview'); prev.style.display='none'; prev.src=''; delete prev.dataset.base64; }
+
+/* ===== Add Student ===== */
+function addStudent(){
+  const photoData = document.getElementById('studentPhotoPreview').dataset.base64 || null;
+  const admissionYearVal = document.getElementById('studentAdmissionYear').value ? parseInt(document.getElementById('studentAdmissionYear').value) : null;
+  const s = { roll: document.getElementById('studentRoll').value.trim(), name: document.getElementById('studentName').value.trim(), course: document.getElementById('studentCourse').value, branch: document.getElementById('studentBranch').value, admissionYear: admissionYearVal, year: document.getElementById('studentYear').value || '', class: document.getElementById('studentClass').value.trim(), dob: document.getElementById('studentDOB').value, mobile: document.getElementById('studentMobile').value.trim(), email: document.getElementById('studentEmail').value.trim(), address: document.getElementById('studentAddress').value.trim(), photo: photoData };
+  if(!s.roll || !s.name || !s.course || !s.branch){ toast('Please fill Roll, Name, Course & Branch','bg-red-600'); return; }
+  if(s.course === 'BTECH' && (!s.admissionYear || isNaN(s.admissionYear))){ toast('Please enter valid Admission Year for B.Tech','bg-red-600'); return; }
+  if(s.course === 'BTECH' && s.admissionYear){ const acadStart = currentAcademicYearStart(); let yearNum = acadStart - s.admissionYear + 1; if(yearNum < 1) yearNum = 1; if(yearNum > 4) yearNum = 4; s.year = yearNumberToLabel(yearNum); }
+  students.push(s); saveToStorage(); toast('Student added','bg-green-600'); renderDashboard(); renderEdit(); renderAttendanceTable(); clearStudentForm();
+}
+function clearStudentForm(){ ['studentRoll','studentName','studentCourse','studentAdmissionYear','studentYear','studentClass','studentDOB','studentMobile','studentEmail','studentAddress'].forEach(id=>{ if(document.getElementById(id)) document.getElementById(id).value=''; }); document.getElementById('studentBranch').innerHTML='<option value=\"\">Select Branch</option>'; document.getElementById('studentPhoto').value=''; const prev=document.getElementById('studentPhotoPreview'); prev.style.display='none'; prev.src=''; delete prev.dataset.base64; }
+
+/* ===== Remove ===== */
+function removeStudent(i){ if(!confirm('Delete student?')) return; students.splice(i,1); saveToStorage(); renderEdit(); renderDashboard(); renderAttendanceTable(); toast('Student removed','bg-red-600'); }
+function deleteTeacher(i){ if(!confirm('Delete teacher?')) return; teachers.splice(i,1); saveToStorage(); renderEdit(); renderDashboard(); toast('Teacher removed','bg-red-600'); }
+
+/* ===== Render Manage / Edit (with Edit + ID + Delete) ===== */
+function renderEdit(){
+  const container = document.getElementById('editContainer'); container.innerHTML = '';
+  const q = (document.getElementById('globalSearch')?.value || '').toLowerCase().trim();
+
+  const tHeader = document.createElement('div'); tHeader.className='font-semibold text-lg'; tHeader.innerText='Teachers'; container.appendChild(tHeader);
+  if(teachers.length === 0){ const p = document.createElement('div'); p.innerText='No teachers yet.'; p.className='text-sm text-gray-600'; container.appendChild(p); } else {
+    teachers.forEach((t,i)=>{
+      if(q && !( (t.name||'').toLowerCase().includes(q) || (t.department||'').toLowerCase().includes(q) || (t.empID||'').toLowerCase().includes(q) )) return;
+      const row = document.createElement('div'); row.className='flex justify-between items-center p-2 border rounded';
+      row.innerHTML = `<div class="flex items-center gap-3">
+                         ${t.photo ? `<img src="${t.photo}" class="thumb">` : `<div class="thumb bg-gray-200 flex items-center justify-center text-xs text-gray-600">No</div>`}
+                         <div>
+                           <div class="font-medium">${t.name} <span class="text-sm text-gray-600">(${t.empID||'--'})</span></div>
+                           <div class="text-sm text-gray-600">${t.department || '--'} • ${t.mobile || '--'} ${t.email? '• '+t.email : ''}</div>
+                           <div class="text-sm text-gray-700 mt-1">Username: <strong>${t.username || (t.mobile||'')}</strong> | Password: <strong>${t.password || ''}</strong></div>
+                         </div>
+                       </div>
+                       <div class="flex gap-2">
+                         <button onclick="editTeacher(${i})" class="bg-yellow-500 text-white px-2 py-1 rounded">Edit</button>
+                         <button onclick="downloadTeacherID(${i})" class="bg-blue-500 text-white px-2 py-1 rounded">ID Card</button>
+                         <button onclick="deleteTeacher(${i})" class="bg-red-600 text-white px-2 py-1 rounded">Delete</button>
+                       </div>`;
+      container.appendChild(row);
+    });
+  }
+
+  const sHeader = document.createElement('div'); sHeader.className='font-semibold text-lg mt-4'; sHeader.innerText='Students'; container.appendChild(sHeader);
+  if(students.length === 0){ const p = document.createElement('div'); p.innerText='No students yet.'; p.className='text-sm text-gray-600'; container.appendChild(p); } else {
+    students.forEach((s,i)=>{
+      if(q && !( (s.name||'').toLowerCase().includes(q) || (s.roll||'').toLowerCase().includes(q) || (s.branch||'').toLowerCase().includes(q))) return;
+      const row = document.createElement('div'); row.className='flex justify-between items-center p-2 border rounded';
+      row.innerHTML = `<div class="flex items-center gap-3">
+                         ${s.photo ? `<img src="${s.photo}" class="thumb">` : `<div class="thumb bg-gray-200 flex items-center justify-center text-xs text-gray-600">No</div>`}
+                         <div>
+                           <div class="font-medium">${s.name} <span class="text-sm text-gray-600">(${s.roll||'--'})</span></div>
+                           <div class="text-sm text-gray-600">${s.course} • ${s.branch} • Year: ${s.year || '--'} • Class: ${s.class || '--'}</div>
+                         </div>
+                       </div>
+                       <div class="flex gap-2">
+                         <button onclick="editStudent(${i})" class="bg-yellow-500 text-white px-2 py-1 rounded">Edit</button>
+                         <button onclick="downloadStudentID(${i})" class="bg-blue-500 text-white px-2 py-1 rounded">ID Card</button>
+                         <button onclick="downloadStudentJSON(${i})" class="bg-blue-600 text-white px-2 py-1 rounded">Download</button>
+                         <button onclick="removeStudent(${i})" class="bg-red-600 text-white px-2 py-1 rounded">Delete</button>
+                       </div>`;
+      container.appendChild(row);
+    });
+  }
+}
+
+/* ===== Edit Modal handling ===== */
+let editTarget = null; // {type:'teacher'|'student', index}
+function editTeacher(i){ editTarget = {type:'teacher', index:i}; openEditModalForTeacher(i); }
+function editStudent(i){ editTarget = {type:'student', index:i}; openEditModalForStudent(i); }
+
+function openEditModalForTeacher(i){
+  const t = teachers[i];
+  document.getElementById('editModalTitle').innerText = `Edit Teacher - ${t.name}`;
+  const body = document.getElementById('editModalBody'); body.innerHTML = `
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div><label class="text-sm">Full Name</label><input id="edit_name" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.name)}"/></div>
+      <div><label class="text-sm">Mobile</label><input id="edit_mobile" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.mobile)}"/></div>
+      <div><label class="text-sm">Department</label><input id="edit_department" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.department)}"/></div>
+      <div><label class="text-sm">Employee ID</label><input id="edit_empID" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.empID)}"/></div>
+      <div><label class="text-sm">Email</label><input id="edit_email" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.email)}"/></div>
+      <div><label class="text-sm">Designation</label><input id="edit_desig" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.desig)}"/></div>
+      <div class="md:col-span-2"><label class="text-sm">Address</label><input id="edit_address" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.address)}"/></div>
+      <div class="md:col-span-2"><label class="text-sm">Photo (upload to replace)</label><input id="edit_photo" type="file" accept="image/*" class="w-full border rounded px-3 py-2"/></div>
+    </div>
+  `;
+  document.getElementById('editModal').classList.add('active');
+  // wire up photo preview saving to temp dataset when chosen
+  document.getElementById('edit_photo').addEventListener('change', (e)=>{ const f=e.target.files[0]; if(f) fileToBase64(f, data => { document.getElementById('edit_photo').dataset.base64 = data; }); });
+}
+
+function openEditModalForStudent(i){
+  const s = students[i];
+  document.getElementById('editModalTitle').innerText = `Edit Student - ${s.name}`;
+  const body = document.getElementById('editModalBody'); body.innerHTML = `
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div><label class="text-sm">Full Name</label><input id="edit_name" class="w-full border rounded px-3 py-2" value="${escapeHtml(s.name)}"/></div>
+      <div><label class="text-sm">Roll</label><input id="edit_roll" class="w-full border rounded px-3 py-2" value="${escapeHtml(s.roll)}"/></div>
+      <div><label class="text-sm">Course</label><input id="edit_course" class="w-full border rounded px-3 py-2" value="${escapeHtml(s.course)}"/></div>
+      <div><label class="text-sm">Branch</label><input id="edit_branch" class="w-full border rounded px-3 py-2" value="${escapeHtml(s.branch)}"/></div>
+      <div><label class="text-sm">Class</label><input id="edit_class" class="w-full border rounded px-3 py-2" value="${escapeHtml(s.class)}"/></div>
+      <div><label class="text-sm">Admission Year</label><input id="edit_admissionYear" class="w-full border rounded px-3 py-2" value="${escapeHtml(s.admissionYear||'')}"/></div>
+      <div class="md:col-span-2"><label class="text-sm">Address</label><input id="edit_address" class="w-full border rounded px-3 py-2" value="${escapeHtml(s.address)}"/></div>
+      <div class="md:col-span-2"><label class="text-sm">Photo (upload to replace)</label><input id="edit_photo" type="file" accept="image/*" class="w-full border rounded px-3 py-2"/></div>
+    </div>
+  `;
+  document.getElementById('editModal').classList.add('active');
+  document.getElementById('edit_photo').addEventListener('change', (e)=>{ const f=e.target.files[0]; if(f) fileToBase64(f, data => { document.getElementById('edit_photo').dataset.base64 = data; }); });
+}
+
+function closeEditModal(){ editTarget=null; document.getElementById('editModal').classList.remove('active'); document.getElementById('editModalBody').innerHTML=''; }
+
+function saveEdit(){
+  if(!editTarget) return;
+  if(editTarget.type==='teacher'){
+    const i = editTarget.index; const t = teachers[i];
+    t.name = document.getElementById('edit_name').value.trim();
+    t.mobile = normalizeMobile(document.getElementById('edit_mobile').value.trim());
+    t.department = document.getElementById('edit_department').value.trim();
+    t.empID = document.getElementById('edit_empID').value.trim();
+    t.email = document.getElementById('edit_email').value.trim();
+    t.desig = document.getElementById('edit_desig').value.trim();
+    t.address = document.getElementById('edit_address').value.trim();
+    const photoBase = document.getElementById('edit_photo').dataset.base64;
+    if(photoBase) t.photo = photoBase;
+    teachers[i]=t; saveToStorage(); renderEdit(); renderDashboard(); toast('Teacher updated','bg-green-600'); closeEditModal();
+  } else {
+    const i = editTarget.index; const s = students[i];
+    s.name = document.getElementById('edit_name').value.trim();
+    s.roll = document.getElementById('edit_roll').value.trim();
+    s.course = document.getElementById('edit_course').value.trim();
+    s.branch = document.getElementById('edit_branch').value.trim();
+    s.class = document.getElementById('edit_class').value.trim();
+    const ay = document.getElementById('edit_admissionYear').value.trim();
+    s.admissionYear = ay?parseInt(ay):null;
+    s.address = document.getElementById('edit_address').value.trim();
+    const photoBase = document.getElementById('edit_photo').dataset.base64;
+    if(photoBase) s.photo = photoBase;
+    students[i]=s; saveToStorage(); renderEdit(); renderDashboard(); renderAttendanceTable(); toast('Student updated','bg-green-600'); closeEditModal();
+  }
+}
+
+/* ===== ID Card Generation (with QR) ===== */
+async function downloadTeacherID(i){
+  const t = teachers[i];
+  if(!t) return;
+  const html = generateIDCardHTML({type:'Teacher', name:t.name, id:t.empID, dept:t.department, role:t.desig || 'Teacher', mobile:t.mobile, photo:t.photo});
+  await renderAndSaveID(html, `ID_TEACHER_${t.empID || t.mobile}.pdf`);
+}
+async function downloadStudentID(i){
+  const s = students[i];
+  if(!s) return;
+  const html = generateIDCardHTML({type:'Student', name:s.name, id:s.roll, dept:s.branch, role:s.course || 'Student', mobile:s.mobile, photo:s.photo});
+  await renderAndSaveID(html, `ID_STUDENT_${s.roll || i}.pdf`);
+}
+
+function generateIDCardHTML({type, name, id, dept, role, mobile, photo}){
+  const logoSrc = 'mjrcet.jpg';
+  const photoHtml = photo ? `<img src="${photo}" style="width:110px;height:110px;object-fit:cover;border-radius:8px;border:2px solid #eee">` : `<div style="width:110px;height:110px;background:#eee;display:flex;align-items:center;justify-content:center;border-radius:8px;color:#666">No Photo</div>`;
+  const safeName = escapeHtml(name || '');
+  const safeDept = escapeHtml(dept || '');
+  const safeRole = escapeHtml(role || '');
+  const safeId = escapeHtml(id || '');
+  const safeMobile = escapeHtml(mobile || '');
+  return `
+  <div style="width:540px;height:340px;font-family:Arial,Helvetica,sans-serif;padding:18px;box-sizing:border-box;border-radius:12px;border:6px solid #6D28D9;display:flex;background:#fff;">
+    <div style="flex:1; display:flex; flex-direction:column; justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:12px">
+        <img src="${logoSrc}" style="width:70px;height:70px;object-fit:contain;border-radius:8px;background:#fff;padding:6px"/>
+        <div>
+          <div style="font-weight:700;color:#4C1D95;font-size:18px">MJR COLLEGE OF ENGINEERING & TECHNOLOGY</div>
+          <div style="font-size:12px;color:#374151;margin-top:4px">Official ID Card - ${type}</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:14px;align-items:center">
+        <div>${photoHtml}</div>
+        <div style="flex:1;">
+          <div style="font-size:20px;font-weight:700;color:#111;margin-bottom:6px">${safeName}</div>
+          <div style="font-size:14px;color:#374151;margin-bottom:6px">${safeRole} • ${safeDept}</div>
+          <div style="font-size:13px;color:#374151">ID: <strong>${safeId}</strong></div>
+          <div style="font-size:13px;color:#374151">Mobile: ${safeMobile}</div>
+        </div>
+        <div id="qrContainer" style="width:120px;height:120px;background:#fff;padding:4px;border-radius:6px;display:flex;align-items:center;justify-content:center"></div>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
+        <div style="font-size:12px;color:#6b7280">Issued by MJRCET</div>
+        <div style="font-size:12px;color:#6b7280">Signature</div>
+      </div>
+    </div>
+  </div>
+  `;
+}
+
+async function renderAndSaveID(htmlString, filename){
+  const tpl = document.getElementById('idCardTemplate');
+  tpl.style.display='block'; tpl.innerHTML = htmlString;
+  const qrContainer = tpl.querySelector('#qrContainer');
+  if(qrContainer){ qrContainer.innerHTML=''; const q = new QRCode(qrContainer, { text: filename + '|' + new Date().toISOString(), width:110, height:110 }); }
+  await new Promise(r=>setTimeout(r,250));
+  const canvas = await html2canvas(tpl, { scale:2, useCORS:true, allowTaint:true });
+  const imgData = canvas.toDataURL('image/png');
+  const pdf = new jspdf.jsPDF({orientation:'landscape', unit:'px', format:[canvas.width, canvas.height]});
+  pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+  pdf.save(filename);
+  tpl.style.display='none'; tpl.innerHTML='';
+}
+
+/* ===== Requests & Approvals (Updated) ===== */
+// Request structure:
+// { id, name, type:'Student'|'Teacher', purpose, status:'Pending'|'Approved by Admin'|'Approved by Teacher'|'Rejected by Admin'|'Rejected by Teacher', approver:'Name', requestedBy:'Student'|'Teacher', timestamp, requesterId }
+
+function setRequestFilter(filter){
+  currentRequestFilter = filter;
+  document.getElementById('filterAll').classList.remove('bg-gray-200'); document.getElementById('filterStudent').classList.remove('bg-gray-200'); document.getElementById('filterTeacher').classList.remove('bg-gray-200');
+  if(filter==='All') document.getElementById('filterAll').classList.add('bg-gray-200');
+  if(filter==='Student') document.getElementById('filterStudent').classList.add('bg-gray-200');
+  if(filter==='Teacher') document.getElementById('filterTeacher').classList.add('bg-gray-200');
+  renderRequests(filter);
+}
+
+function renderRequests(filterType = 'All') {
+  const container = document.getElementById('requestsContainer');
+  container.innerHTML = '';
+
+  const filtered = requests.filter(r => filterType === 'All' || r.type === filterType);
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<div class="p-3 text-gray-500">No ${filterType !== 'All' ? filterType.toLowerCase() : ''} requests found.</div>`;
+    return;
+  }
+
+  filtered.forEach((r) => {
+    const i = requests.indexOf(r);
+    const statusColor =
+      (r.status || '').includes('Approved') ? 'text-green-700' :
+      (r.status || '').includes('Rejected') ? 'text-red-700' : 'text-yellow-700';
+
+    const infoLine = r.approver
+      ? `<div class="text-sm text-gray-500">Status: <strong>${escapeHtml(r.status)}</strong> • Handled by: ${escapeHtml(r.approver)}</div>`
+      : `<div class="text-sm text-gray-500">Status: <strong>${escapeHtml(r.status || 'Pending')}</strong></div>`;
+
+    // Buttons logic:
+    let actionHtml = '';
+    if ((r.status || 'Pending') === 'Pending') {
+      // If current user is Admin -> show Admin approve buttons
+      if (currentUserRole === 'Admin') {
+        actionHtml = `
+          <div class="flex gap-2">
+            <button onclick="approveRequest(${i}, 'Admin', 'Admin')" class="bg-green-600 hover:bg-green-700 px-3 py-1 text-white rounded">Approve</button>
+            <button onclick="rejectRequest(${i}, 'Admin', 'Admin')" class="bg-red-600 hover:bg-red-700 px-3 py-1 text-white rounded">Reject</button>
+          </div>
+        `;
+      } else if (currentUserRole === 'Teacher' && r.type === 'Student') {
+        // Teachers can approve/reject student leave
+        actionHtml = `
+          <div class="flex gap-2">
+            <button onclick="approveRequest(${i}, 'Teacher', currentUserName)" class="bg-green-600 hover:bg-green-700 px-3 py-1 text-white rounded">Approve</button>
+            <button onclick="rejectRequest(${i}, 'Teacher', currentUserName)" class="bg-red-600 hover:bg-red-700 px-3 py-1 text-white rounded">Reject</button>
+          </div>
+        `;
+      } else {
+        actionHtml = `<div class="text-sm text-gray-500">Pending</div>`;
+      }
+    } else {
+      actionHtml = `<div class="text-sm font-semibold ${statusColor}">${escapeHtml(r.status)}</div>`;
+    }
+
+    const card = document.createElement('div');
+    card.className = 'p-3 border rounded flex justify-between items-start';
+    card.innerHTML = `
+      <div style="max-width:72%">
+        <div class="font-medium">${escapeHtml(r.name)} <span class="text-sm text-gray-500">(${r.type})</span></div>
+        <div class="text-sm text-gray-600 mt-1">${escapeHtml(r.purpose || 'Leave Request')}</div>
+        <div class="text-xs text-gray-400 mt-2">Requested by: ${escapeHtml(r.requestedBy || '')} • ${escapeHtml(r.timestamp || '')}</div>
+        <div class="mt-2">${infoLine}</div>
+      </div>
+      <div class="flex flex-col items-end gap-2">${actionHtml}</div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+/**
+ * Approve a request.
+ * @param {number} i - index in requests array
+ * @param {string} approverRole - 'Admin' or 'Teacher'
+ * @param {string} approverName - approver name (teacher/admin)
+ */
+function approveRequest(i, approverRole = 'Admin', approverName = '') {
+  const r = requests[i];
+  if (!r) return;
+  const who = approverRole === 'Teacher' && approverName ? approverName : 'Admin';
+  r.status = `Approved by ${approverRole}`;
+  r.approver = who;
+  r.approvedAt = new Date().toLocaleString();
+  saveToStorage();
+  renderRequests(currentRequestFilter);
+  renderDashboard();
+  toast(`Request from ${r.name} approved (${who})`, 'bg-green-600');
+  renderTeacherRequests(); renderStudentRequests(); renderTeacherMyRequests();
+}
+
+function rejectRequest(i, approverRole = 'Admin', approverName = '') {
+  const r = requests[i];
+  if (!r) return;
+  const who = approverRole === 'Teacher' && approverName ? approverName : 'Admin';
+  r.status = `Rejected by ${approverRole}`;
+  r.approver = who;
+  r.approvedAt = new Date().toLocaleString();
+  saveToStorage();
+  renderRequests(currentRequestFilter);
+  renderDashboard();
+  toast(`Request from ${r.name} rejected (${who})`, 'bg-red-600');
+  renderTeacherRequests(); renderStudentRequests(); renderTeacherMyRequests();
+}
+
+/* ===== Request submission (student & teacher) ===== */
+function openStudentRequestModal(){ document.getElementById('studentRequestReason').value=''; document.getElementById('studentRequestModal').classList.add('active'); }
+function closeStudentRequestModal(){ document.getElementById('studentRequestModal').classList.remove('active'); }
+function openTeacherRequestModal(){ document.getElementById('teacherRequestReason').value=''; document.getElementById('teacherRequestModal').classList.add('active'); }
+function closeTeacherRequestModal(){ document.getElementById('teacherRequestModal').classList.remove('active'); }
+
+function submitStudentRequest(){
+  const reason = document.getElementById('studentRequestReason').value.trim();
+  if(!reason){ toast('Enter reason','bg-red-600'); return; }
+  const s = JSON.parse(sessionStorage.getItem('loggedInStudent') || 'null');
+  const name = s ? (s.name || s.roll) : (currentUserName || 'Student');
+  const id = s ? s.roll : ('S' + (students.length+1));
+  const req = { id: Date.now(), name, type:'Student', purpose:reason, status:'Pending', approver:'', requestedBy:'Student', timestamp:new Date().toLocaleString(), requesterId:id };
+  requests.push(req); saveToStorage(); closeStudentRequestModal(); renderRequests(currentRequestFilter); renderStudentRequests(); renderDashboard(); toast('Request submitted','bg-green-600');
+}
+
+function submitTeacherRequest(){
+  const reason = document.getElementById('teacherRequestReason').value.trim();
+  if(!reason){ toast('Enter reason','bg-red-600'); return; }
+  const t = JSON.parse(sessionStorage.getItem('loggedInTeacher') || 'null');
+  const name = t ? (t.name || t.empID) : (currentUserName || 'Teacher');
+  const id = t ? t.empID : ('T' + (teachers.length+1));
+  const req = { id: Date.now(), name, type:'Teacher', purpose:reason, status:'Pending', approver:'', requestedBy:'Teacher', timestamp:new Date().toLocaleString(), requesterId:id };
+  requests.push(req); saveToStorage(); closeTeacherRequestModal(); renderRequests(currentRequestFilter); renderTeacherRequests(); renderDashboard(); toast('Request submitted','bg-green-600');
+}
+
+/* ===== Render teacher-side student requests for approval (when teacher logged in) ===== */
+function renderTeacherRequests(){
+  const container = document.getElementById('teacherRequestsList');
+  if(!container) return;
+  container.innerHTML = '';
+  const pendingStudentRequests = requests.filter(r => r.type === 'Student');
+  if(pendingStudentRequests.length === 0){ container.innerHTML = `<div class="text-sm text-gray-500">No student requests.</div>`; return; }
+  pendingStudentRequests.forEach((r) => {
+    const idx = requests.indexOf(r);
+    const status = r.status || 'Pending';
+    const actions = (status === 'Pending') ? `
+      <div class="flex gap-2">
+        <button onclick="approveRequest(${idx}, 'Teacher', currentUserName)" class="bg-green-600 text-white px-2 py-1 rounded">Approve</button>
+        <button onclick="rejectRequest(${idx}, 'Teacher', currentUserName)" class="bg-red-600 text-white px-2 py-1 rounded">Reject</button>
+      </div>` : `<div class="text-sm ${status.includes('Approved')? 'text-green-700' : 'text-red-700'}">${escapeHtml(status)}</div>`;
+    const card = document.createElement('div');
+    card.className = 'p-2 border rounded flex justify-between items-start';
+    card.innerHTML = `<div>
+                        <div class="font-medium">${escapeHtml(r.name)}</div>
+                        <div class="text-sm text-gray-600">${escapeHtml(r.purpose)}</div>
+                        <div class="text-xs text-gray-400 mt-1">${escapeHtml(r.timestamp)}</div>
+                      </div>
+                      <div>${actions}</div>`;
+    container.appendChild(card);
+  });
+}
+
+/* ===== Render teacher's own requests ===== */
+function renderTeacherMyRequests(){
+  const container = document.getElementById('teacherMyRequestsList');
+  if(!container) return;
+  container.innerHTML = '';
+  const t = JSON.parse(sessionStorage.getItem('loggedInTeacher') || 'null');
+  const name = t ? t.name : currentUserName;
+  const myReqs = requests.filter(r => r.type === 'Teacher' && r.name === name);
+  if(myReqs.length === 0){ container.innerHTML = `<div class="text-sm text-gray-500">No requests submitted.</div>`; return; }
+  myReqs.forEach(r=>{
+    const card = document.createElement('div');
+    card.className='p-2 border rounded';
+    card.innerHTML = `<div class="font-medium">${escapeHtml(r.purpose)}</div>
+                      <div class="text-xs text-gray-400">${escapeHtml(r.timestamp)}</div>
+                      <div class="mt-2 text-sm ${r.status.includes('Approved')? 'text-green-700' : r.status.includes('Rejected')? 'text-red-700':'text-yellow-700'}">${escapeHtml(r.status)}</div>
+                      ${r.approver? `<div class="text-sm text-gray-500">Handled by: ${escapeHtml(r.approver)}</div>` : ''}`;
+    container.appendChild(card);
+  });
+}
+
+/* ===== Render student's own requests on student dashboard ===== */
+function renderStudentRequests(){
+  const container = document.getElementById('studentRequestsList');
+  if(!container) return;
+  container.innerHTML = '';
+  const s = JSON.parse(sessionStorage.getItem('loggedInStudent') || 'null');
+  const myRoll = s ? s.roll : null;
+  const myRequests = myRoll ? requests.filter(r => r.type === 'Student' && (r.requesterId == myRoll || r.name === s.name)) : requests.filter(r => r.type === 'Student');
+  if(myRequests.length === 0){ container.innerHTML = `<div class="text-sm text-gray-500">No requests submitted.</div>`; return; }
+  myRequests.forEach(r => {
+    const status = r.status || 'Pending';
+    const approverLine = r.approver ? `<div class="text-sm text-gray-500">Handled by: ${escapeHtml(r.approver)}</div>` : '';
+    const card = document.createElement('div');
+    card.className = 'p-2 border rounded';
+    card.innerHTML = `<div class="font-medium">${escapeHtml(r.purpose)}</div>
+                      <div class="text-xs text-gray-400">${escapeHtml(r.timestamp)}</div>
+                      <div class="mt-2 text-sm ${status.includes('Approved')? 'text-green-700' : status.includes('Rejected')? 'text-red-700':'text-yellow-700'}">${escapeHtml(r.status)}</div>
+                      ${approverLine}`;
+    container.appendChild(card);
+  });
+}
+
+/* Wrapper to initially render requests UIs */
+function renderRequestsInitial(){
+  renderRequests(currentRequestFilter);
+  renderTeacherRequests();
+  renderTeacherMyRequests();
+  renderStudentRequests();
+}
+
+/* ===== SMS ===== */
+function sendSMS(to,msg){ smsLogs.push({id:smsLogs.length+1,to,msg,time:new Date().toLocaleString()}); saveToStorage(); renderDashboard(); renderSMS(); }
+function renderSMS(){ const c=document.getElementById('smsContainer'); c.innerHTML=''; smsLogs.forEach(s=>{c.innerHTML+=`<div class="p-2 border-b">${s.time} → ${s.to}: ${s.msg}</div>`}); }
+
+/* ===== Attendance ===== */
+function renderAttendanceTable(){
+  const tbody=document.getElementById('attendanceTable'); const cls=document.getElementById('attendanceClass').value; tbody.innerHTML='';
+  students.filter(s=>!cls || s.class===cls).forEach(s=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td class="border px-3 py-2">${s.roll}</td><td class="border px-3 py-2">${s.name}</td><td class="border px-3 py-2 text-center"><input type="checkbox" data-roll="${s.roll}"/></td>`; tbody.appendChild(tr); });
+}
+function downloadAttendanceReport(){ const rows=Array.from(document.querySelectorAll('#attendanceTable tr')); const report=rows.map(row=>{ const roll=row.cells[0].textContent; const name=row.cells[1].textContent; const present=row.querySelector('input').checked?'Present':'Absent'; return {roll,name,present}; }); const blob=new Blob([JSON.stringify(report,null,2)],{type:'application/json'}); const link=document.createElement('a'); link.href=URL.createObjectURL(blob); link.download=`attendance_${new Date().toISOString().slice(0,10)}.json`; link.click(); URL.revokeObjectURL(link.href); toast('Attendance report downloaded','bg-green-600'); }
+
+function exportAllData(){ const data={teachers,students,requests,smsLogs}; const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const link=document.createElement('a'); link.href=URL.createObjectURL(blob); link.download='MJRCET_data.json'; link.click(); URL.revokeObjectURL(link.href); toast('All data downloaded','bg-green-600'); }
+function downloadStudentJSON(i){ const blob=new Blob([JSON.stringify(students[i],null,2)],{type:'application/json'}); const link=document.createElement('a'); link.href=URL.createObjectURL(blob); link.download=`student_${students[i].roll||i}.json`; link.click(); URL.revokeObjectURL(link.href); toast('Student downloaded','bg-green-600'); }
+
+/* ===== Recompute years on load ===== */
+function recomputeAllBtechYears(){ const acadStart = currentAcademicYearStart(); students.forEach(s=>{ if(s.course === 'BTECH' && s.admissionYear){ let yearNum = acadStart - s.admissionYear + 1; if(yearNum < 1) yearNum = 1; if(yearNum > 4) yearNum = 4; s.year = yearNumberToLabel(yearNum); } }); saveToStorage(); }
+
+/* ===== Utility: escape HTML to avoid injection in modal values ===== */
+function escapeHtml(str){ if(!str) return ''; return String(str).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;'); }
+
+/* ===== Branch/Year helpers (student form) ===== */
+function updateBranchOptions(){ const course = document.getElementById('studentCourse').value; const bSel = document.getElementById('studentBranch'); bSel.innerHTML = '<option value=\"\">Select Branch</option>'; if(branchLists[course]) branchLists[course].forEach(br => { const o=document.createElement('option'); o.value=br; o.textContent=br; bSel.appendChild(o); }); computeAndSetYear(); }
+function computeAndSetYear(){ const course=document.getElementById('studentCourse').value; const admissionYearStr=document.getElementById('studentAdmissionYear').value; const yearSelect=document.getElementById('studentYear'); const yearNote=document.getElementById('yearNote'); if(course==='BTECH' && admissionYearStr){ const admissionYear=parseInt(admissionYearStr); if(isNaN(admissionYear)){ yearSelect.value=''; yearNote.innerText='Invalid admission year'; return; } const acadStart=currentAcademicYearStart(); let yearNum=acadStart - admissionYear + 1; if(yearNum<1) yearNum=1; if(yearNum>4) yearNum=4; yearSelect.value=yearNumberToLabel(yearNum); yearSelect.disabled=true; yearNote.innerText=`Auto-calculated for B.Tech (Admission ${admissionYear}) — current academic start ${acadStart}`; } else { yearSelect.disabled=false; yearNote.innerText='Select year manually for MBA/Diploma (B.Tech auto-calculated).'; } }
+
+/* ===== Initialize UI on load ===== */
+window.addEventListener('load', ()=>{
+  if(loadFromStorage()){ recomputeAllBtechYears(); }
+  renderDashboard(); renderEdit(); renderSMS(); renderRequestsInitial(); renderAttendanceTable();
+  loginScreen.classList.remove('hidden');
+  computeAndSetYear();
+});
+</script>
+</body>
+</html>
