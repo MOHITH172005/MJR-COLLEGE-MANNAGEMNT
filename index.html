@@ -3,32 +3,23 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>MJRCET College Management - Full App</title>
-
-  <!-- Tailwind -->
+  <title>MJRCET College Management - JSON Only (Complete)</title>
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- html2canvas, qrcode, jspdf -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <style>
-    #splash {
-      position: fixed; top:0; left:0; width:100%; height:100%;
-      background: linear-gradient(to right,#7e22ce,#4f46e5);
-      display:flex; flex-direction:column; align-items:center; justify-content:center;
-      z-index:50; transition:opacity 0.5s ease;
-    }
+    #splash { position: fixed; top:0; left:0; width:100%; height:100%; background: linear-gradient(to right,#7e22ce,#4f46e5); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:50; transition:opacity 0.5s ease;}
     #progress-bar { width:250px; height:8px; background:#ddd; border-radius:9999px; overflow:hidden; margin-top:20px;}
     #progress { height:100%; width:0%; background:#22c55e; transition:width 0.2s;}
     .toast { position: fixed; right: 20px; bottom: 20px; z-index:9999; }
     img.thumb { width:48px; height:48px; object-fit:cover; border-radius:6px; }
     .small-muted { font-size:0.85rem; color:#6b7280; }
     #idCardTemplate { width: 540px; height: 340px; background: white; border-radius:12px; padding:20px; box-sizing:border-box; display:none; }
-    /* simple modal centering */
     .modal { position: fixed; inset:0; display:none; align-items:center; justify-content:center; background: rgba(0,0,0,0.4); z-index:60; }
     .modal.active { display:flex; }
+    #markAttendanceContainer { overflow:auto; }
   </style>
 </head>
 <body class="bg-gray-50 text-gray-800">
@@ -42,7 +33,7 @@
   <h1 class="text-white text-2xl font-bold mt-6">WELCOME TO MJR COLLEGE OF ENGINEERING AND TECHNOLOGY</h1>
 </div>
 
-<!-- toast container -->
+<!-- Toast -->
 <div id="toastContainer" class="toast"></div>
 
 <!-- Login -->
@@ -51,27 +42,27 @@
     <h1 class="text-3xl font-bold text-center text-purple-700 mb-6">MJRCET Login</h1>
 
     <label class="text-sm font-medium text-gray-600">Login As</label>
-    <select id="userType" class="w-full border rounded-lg px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-purple-500">
+    <select id="userType" class="w-full border rounded-lg px-3 py-2 mb-4">
       <option value="admin">Admin</option>
       <option value="teacher">Teacher</option>
       <option value="student">Student</option>
+      <option value="parent">Parent</option>
     </select>
 
     <input id="username" type="text" placeholder="Username / Mobile / Roll" class="w-full border rounded-lg px-3 py-2 mb-3"/>
-    <input id="password" type="password" placeholder="Password / OTP" class="w-full border rounded-lg px-3 py-2 mb-4"/>
+    <input id="password" type="password" placeholder="Password / OTP / PIN" class="w-full border rounded-lg px-3 py-2 mb-4"/>
 
     <div class="flex gap-3">
       <button onclick="login()" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 rounded-lg">Login</button>
       <button onclick="seedSampleData()" class="bg-gray-200 px-4 py-2 rounded-lg">Seed Sample</button>
     </div>
 
-    <p class="text-sm text-gray-500 mt-4">Demo credentials: use Seed Sample then Login as Teacher (mobile) or Student (roll).</p>
+    <p class="text-sm text-gray-500 mt-4">Demo: Seed Sample then login as Teacher (mobile) or Student (roll). Admin ID: <strong>MJRCET</strong></p>
   </div>
 </div>
 
 <!-- Admin Dashboard -->
 <div id="adminDashboard" class="hidden min-h-screen flex">
-  <!-- Sidebar -->
   <aside class="w-72 bg-purple-700 text-white flex flex-col">
     <div class="p-6 border-b border-purple-600 text-center">
       <img src="mjrcet.jpg" alt="logo" class="mx-auto w-24 h-24 object-contain rounded-full bg-white p-2" onerror="this.style.display='none'"/>
@@ -85,12 +76,12 @@
       <button onclick="showTab('approve')" id="approveTab" class="w-full text-left px-4 py-2 hover:bg-purple-800 rounded-lg">Approve Requests</button>
       <button onclick="showTab('smslog')" id="smsTab" class="w-full text-left px-4 py-2 hover:bg-purple-800 rounded-lg">SMS Log</button>
       <button onclick="showTab('attendance')" id="attendanceTab" class="w-full text-left px-4 py-2 hover:bg-purple-800 rounded-lg">Attendance Report</button>
+      <button onclick="showTab('markAttendance')" id="markAttendanceTab" class="w-full text-left px-3 py-2 hover:bg-purple-800 rounded-lg">Mark Attendance</button>
       <button onclick="logout()" class="w-full text-left px-4 py-2 bg-red-600 hover:bg-red-800 rounded-lg mt-6">Logout</button>
     </nav>
     <div class="p-4 text-sm text-purple-200 border-t border-purple-600">Build: MJRCET · Local demo</div>
   </aside>
 
-  <!-- Main -->
   <main class="flex-1 p-8 overflow-auto">
     <!-- Dashboard -->
     <section id="dashboard" class="mb-8">
@@ -123,14 +114,19 @@
         <div class="flex gap-3">
           <button onclick="showTab('teacher')" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded">Add Teacher</button>
           <button onclick="showTab('student')" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded">Add Student</button>
-          <button onclick="exportAllData()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">Download All Data</button>
+          <button onclick="downloadTeachersAndStudentsCSV()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">Download All Data (CSV)</button>
+          <button onclick="openAdminChangePasswordModal()" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded">Change Admin Password</button>
+          <button onclick="saveToFirebase()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Save (local)</button>
+          <button onclick="loadFromLocalSavedState()" class="bg-blue-400 hover:bg-blue-500 text-white px-4 py-2 rounded">Load from Local</button>
+          <button onclick="exportAppState(true)" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded">Export JSON</button>
+          <button onclick="importAppStateFromFilePrompt(true)" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded">Import JSON</button>
         </div>
       </div>
     </section>
 
     <!-- Add Teacher -->
     <section id="teacher" class="hidden">
-      <div class="bg-white shadow-2xl rounded-3xl p-8 max-w-4xl mx-auto">
+      <div class="bg-white shadow-2xl rounded-3xl p-8 max-w-5xl mx-auto">
         <h2 class="text-3xl font-bold text-purple-700 mb-6 text-center">Add Teacher</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
@@ -153,22 +149,18 @@
             <input id="teacherMobile" placeholder="Enter mobile number (+91 or 10-digit)" class="w-full border rounded-xl px-4 py-3"/>
             <p class="small-muted mt-1">Username defaults to this mobile number (without +91).</p>
           </div>
-
           <div>
             <label class="block mb-1 font-medium text-gray-600">Email ID</label>
             <input id="teacherEmail" placeholder="Enter email ID" class="w-full border rounded-xl px-4 py-3"/>
           </div>
-
-          <div class="md:col-span-2">
+          <div>
             <label class="block mb-1 font-medium text-gray-600">Address</label>
             <input id="teacherAddress" placeholder="Enter address" class="w-full border rounded-xl px-4 py-3"/>
           </div>
-
           <div>
             <label class="block mb-1 font-medium text-gray-600">Employee ID / Staff ID *</label>
             <input id="teacherEmpID" placeholder="Enter unique staff ID" class="w-full border rounded-xl px-4 py-3"/>
           </div>
-
           <div>
             <label class="block mb-1 font-medium text-gray-600">Department *</label>
             <select id="teacherDepartment" class="w-full border rounded-xl px-4 py-3">
@@ -182,65 +174,114 @@
             <label class="block mb-1 font-medium text-gray-600">Designation / Role</label>
             <input id="teacherDesignation" placeholder="e.g., Assistant Professor" class="w-full border rounded-xl px-4 py-3"/>
           </div>
-
           <div>
             <label class="block mb-1 font-medium text-gray-600">Qualification</label>
             <input id="teacherQualification" placeholder="e.g., M.Tech, Ph.D" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+
+          <!-- Employment / HR -->
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Contract Type</label>
+            <select id="teacherContractType" class="w-full border rounded-xl px-4 py-3">
+              <option value="">Select</option><option>Permanent</option><option>Contract</option><option>Visiting</option><option>Temporary</option>
+            </select>
+          </div>
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Employment Status</label>
+            <select id="teacherEmploymentStatus" class="w-full border rounded-xl px-4 py-3">
+              <option value="">Select</option><option>Active</option><option>On Leave</option><option>Resigned</option><option>Retired</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Appointment Type</label>
+            <select id="teacherAppointmentType" class="w-full border rounded-xl px-4 py-3">
+              <option value="">Select</option><option>Full-time</option><option>Part-time</option>
+            </select>
+          </div>
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Grade / Pay Grade</label>
+            <input id="teacherGrade" placeholder="e.g., GRADE A" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Salary (monthly)</label>
+            <input id="teacherSalary" type="number" min="0" placeholder="e.g., 45000" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Probation End Date</label>
+            <input id="teacherProbationEnd" type="date" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">PF Number</label>
+            <input id="teacherPF" placeholder="Provident Fund number" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">ESI Number</label>
+            <input id="teacherESI" placeholder="ESI number" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+
+          <!-- Bank & Tax -->
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Bank Name</label>
+            <input id="teacherBankName" placeholder="Bank name" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">IFSC</label>
+            <input id="teacherIFSC" placeholder="IFSC code" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Account Number</label>
+            <input id="teacherAccountNumber" placeholder="Bank account number" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Tax ID (PAN)</label>
+            <input id="teacherTaxId" placeholder="PAN or tax id" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Aadhaar / National ID</label>
+            <input id="teacherAadhaar" placeholder="Aadhaar or national id" class="w-full border rounded-xl px-4 py-3"/>
           </div>
 
           <div>
             <label class="block mb-1 font-medium text-gray-600">Experience (in years)</label>
             <input type="number" min="0" id="teacherExperience" placeholder="Years" class="w-full border rounded-xl px-4 py-3"/>
           </div>
-
-          <div class="md:col-span-2">
-            <label class="block mb-1 font-medium text-gray-600">Subjects Handled / Specialization</label>
-            <input id="teacherSubjects" placeholder="e.g., DBMS, OS" class="w-full border rounded-xl px-4 py-3"/>
-          </div>
-
           <div>
-            <label class="block mb-1 font-medium text-gray-600">Date of Joining</label>
-            <input type="date" id="teacherDOJ" class="w-full border rounded-xl px-4 py-3"/>
-          </div>
-
-          <div>
-            <label class="block mb-1 font-medium text-gray-600">HOD / Incharge</label>
-            <div class="flex items-center gap-3">
-              <input type="checkbox" id="teacherHOD" class="h-4 w-4"><label class="text-sm">Is HOD / Incharge</label>
-            </div>
-          </div>
-
-          <div class="md:col-span-2 mt-2"><h3 class="text-md font-semibold text-purple-700">Account Details (auto)</h3></div>
-
-          <div>
-            <label class="block mb-1 font-medium text-gray-600">Username</label>
-            <input id="teacherUsername" placeholder="Will default to mobile number" class="w-full border rounded-xl px-4 py-3"/>
-          </div>
-
-          <div>
-            <label class="block mb-1 font-medium text-gray-600">Password (auto-generated)</label>
-            <input id="teacherPassword" readonly class="w-full border rounded-xl px-4 py-3 bg-gray-100"/>
-            <p class="small-muted mt-1">Auto: DOB (DDMMYYYY) + DEPT (uppercase). Example: 17052005CSE</p>
-          </div>
-
-          <div>
-            <label class="block mb-1 font-medium text-gray-600">Aadhaar Number</label>
-            <input id="teacherAadhaar" placeholder="Optional" class="w-full border rounded-xl px-4 py-3"/>
-          </div>
-
-          <div>
-            <label class="block mb-1 font-medium text-gray-600">PAN Number</label>
-            <input id="teacherPAN" placeholder="Optional" class="w-full border rounded-xl px-4 py-3"/>
+            <label class="block mb-1 font-medium text-gray-600">Joining Date</label>
+            <input type="date" id="teacherJoiningDate" class="w-full border rounded-xl px-4 py-3"/>
           </div>
 
           <div class="md:col-span-2">
-            <label class="block mb-1 font-medium text-gray-600">Bank Details</label>
-            <input id="teacherBank" placeholder="Optional" class="w-full border rounded-xl px-4 py-3"/>
+            <label class="block mb-1 font-medium text-gray-600">Subjects (comma-separated)</label>
+            <input id="teacherSubjects" placeholder="e.g., Data Structures, DBMS" class="w-full border rounded-xl px-4 py-3"/>
           </div>
 
           <div class="md:col-span-2">
+            <label class="block mb-1 font-medium text-gray-600">Previous Employers (one per line)</label>
+            <textarea id="teacherPreviousEmployers" placeholder="Org | From | To | Role (one per line)" class="w-full border rounded-xl px-4 py-3" rows="3"></textarea>
+            <p class="text-sm text-gray-500 mt-1">Optional: helpful for CV/verification.</p>
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="block mb-1 font-medium text-gray-600">Publications (one per line)</label>
+            <textarea id="teacherPublications" placeholder="Title | Journal | Year" class="w-full border rounded-xl px-4 py-3" rows="3"></textarea>
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="block mb-1 font-medium text-gray-600">Awards / Achievements</label>
+            <input id="teacherAwards" placeholder="Awards, comma separated" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+
+          <div>
             <label class="block mb-1 font-medium text-gray-600">Emergency Contact</label>
-            <input id="teacherEmergency" placeholder="Emergency contact number" class="w-full border rounded-xl px-4 py-3"/>
+            <input id="teacherEmergencyContact" placeholder="Emergency contact number" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <input type="checkbox" id="teacherIsHod" />
+            <label for="teacherIsHod" class="text-sm">Is HOD</label>
           </div>
 
           <div class="md:col-span-2">
@@ -251,6 +292,47 @@
             </div>
           </div>
 
+          <div class="md:col-span-2">
+            <label class="block mb-1 font-medium text-gray-600">Upload Resume (PDF)</label>
+            <div class="flex items-center gap-3">
+              <input type="file" id="teacherResume" accept="application/pdf" class="w-full border rounded-xl px-4 py-2"/>
+              <div id="teacherResumeName" class="text-sm text-gray-600"></div>
+            </div>
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="block mb-1 font-medium text-gray-600">Profile / Bio</label>
+            <textarea id="teacherBio" class="w-full border rounded-xl px-4 py-3" rows="3" placeholder="Short bio"></textarea>
+          </div>
+
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">LinkedIn</label>
+            <input id="teacherLinkedIn" placeholder="LinkedIn URL" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">ResearchGate</label>
+            <input id="teacherResearchGate" placeholder="ResearchGate URL" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Google Scholar</label>
+            <input id="teacherGoogleScholar" placeholder="Google Scholar URL" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+
+          <div class="md:col-span-2 mt-2"><h3 class="text-md font-semibold text-purple-700">Account Details (auto)</h3></div>
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Username</label>
+            <input id="teacherUsername" placeholder="Will default to mobile number" class="w-full border rounded-xl px-4 py-3"/>
+          </div>
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">Password (auto-generated)</label>
+            <input id="teacherPassword" readonly class="w-full border rounded-xl px-4 py-3 bg-gray-100"/>
+            <p class="small-muted mt-1">Auto: first4(name)+DOB (DDMMYYYY) — login also accepts fallback 12345677 or 4-digit PIN.</p>
+          </div>
+          <div>
+            <label class="block mb-1 font-medium text-gray-600">PIN (4-digit)</label>
+            <input id="teacherPin" readonly class="w-full border rounded-xl px-4 py-3 bg-gray-100"/>
+            <p class="small-muted mt-1">Teacher gets an auto-generated 4-digit PIN for quick login.</p>
+          </div>
         </div>
 
         <div class="mt-6 text-center">
@@ -259,84 +341,227 @@
       </div>
     </section>
 
-    <!-- Add Student -->
-    <section id="student" class="hidden">
-      <div class="bg-white shadow-2xl rounded-3xl p-8 max-w-3xl mx-auto">
-        <h2 class="text-3xl font-bold text-purple-700 mb-6 text-center">Add Student</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label class="block mb-1 font-medium text-gray-600">Full Name *</label>
-            <input id="studentName" placeholder="Enter full name" class="w-full border rounded-xl px-4 py-3"/>
-          </div>
-          <div>
-            <label class="block mb-1 font-medium text-gray-600">Roll Number *</label>
-            <input id="studentRoll" placeholder="Enter roll number" class="w-full border rounded-xl px-4 py-3"/>
-          </div>
+    <!-- Add Student (UPDATED) -->
+<section id="student" class="hidden">
+  <div class="bg-white shadow-2xl rounded-3xl p-8 max-w-4xl mx-auto">
+    <h2 class="text-3xl font-bold text-purple-700 mb-6 text-center">Add Student</h2>
 
-          <div>
-            <label class="block mb-1 font-medium text-gray-600">Course *</label>
-            <select id="studentCourse" onchange="updateBranchOptions(); computeAndSetYear()" class="w-full border rounded-xl px-4 py-3">
-              <option value="">Select Course</option><option value="BTECH">B.Tech</option><option value="MBA">MBA</option><option value="DIPLOMA">Diploma</option>
-            </select>
-          </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- Name -->
+      <div>
+        <label class="block mb-1 font-medium text-gray-600">Full Name *</label>
+        <input id="studentName" placeholder="Enter full name" class="w-full border rounded-xl px-4 py-3"/>
+      </div>
 
-          <div>
-            <label class="block mb-1 font-medium text-gray-600">Branch *</label>
-            <select id="studentBranch" class="w-full border rounded-xl px-4 py-3"><option value="">Select Branch</option></select>
-          </div>
+      <!-- Roll -->
+      <div>
+        <label class="block mb-1 font-medium text-gray-600">Roll Number *</label>
+        <input id="studentRoll" placeholder="Enter roll number" class="w-full border rounded-xl px-4 py-3"/>
+      </div>
 
-          <div>
-            <label class="block mb-1 font-medium text-gray-600">Admission Year *</label>
-            <input id="studentAdmissionYear" type="number" min="2000" max="2100" placeholder="YYYY" class="w-full border rounded-xl px-4 py-3" onchange="computeAndSetYear()"/>
-          </div>
+      <!-- Course -->
+      <div>
+        <label class="block mb-1 font-medium text-gray-600">Course *</label>
+        <select id="studentCourse" onchange="updateBranchOptions(); computeAndSetYear()" class="w-full border rounded-xl px-4 py-3">
+          <option value="">Select Course</option>
+          <option value="BTECH">B.Tech</option>
+          <option value="MBA">MBA</option>
+          <option value="DIPLOMA">Diploma</option>
+        </select>
+      </div>
 
-          <div>
-            <label class="block mb-1 font-medium text-gray-600">Year *</label>
-            <select id="studentYear" class="w-full border rounded-xl px-4 py-3">
-              <option value="">Select Year</option><option value="1st Year">1st Year</option><option value="2nd Year">2nd Year</option><option value="3rd Year">3rd Year</option><option value="4th Year">4th Year</option><option value="Alumni">Alumni</option>
-            </select>
-            <p id="yearNote" class="text-sm text-gray-500 mt-1">For B.Tech: year is auto-calculated from Admission Year.</p>
-          </div>
+      <!-- Branch -->
+      <div>
+        <label class="block mb-1 font-medium text-gray-600">Branch *</label>
+        <select id="studentBranch" class="w-full border rounded-xl px-4 py-3">
+          <option value="">Select Branch</option>
+        </select>
+      </div>
 
-          <div>
-            <label class="block mb-1 font-medium text-gray-600">Class *</label>
-            <input id="studentClass" placeholder="Enter class (e.g., I, II)" class="w-full border rounded-xl px-4 py-3"/>
-          </div>
+      <!-- Admission Year -->
+      <div>
+        <label class="block mb-1 font-medium text-gray-600">Admission Year *</label>
+        <input id="studentAdmissionYear" type="number" min="1900" max="2100" placeholder="YYYY" class="w-full border rounded-xl px-4 py-3" onchange="computeAndSetYear()"/>
+      </div>
 
-          <div>
-            <label class="block mb-1 font-medium text-gray-600">Date of Birth *</label>
-            <input type="date" id="studentDOB" class="w-full border rounded-xl px-4 py-3"/>
-          </div>
+      <!-- Year (auto) -->
+      <div>
+        <label class="block mb-1 font-medium text-gray-600">Year *</label>
+        <select id="studentYear" class="w-full border rounded-xl px-4 py-3">
+          <option value="">Select Year</option>
+          <option value="1st Year">1st Year</option>
+          <option value="2nd Year">2nd Year</option>
+          <option value="3rd Year">3rd Year</option>
+          <option value="4th Year">4th Year</option>
+          <option value="Alumni">Alumni</option>
+        </select>
+        <p id="yearNote" class="text-sm text-gray-500 mt-1">For B.Tech: year is auto-calculated from Admission Year.</p>
+      </div>
 
-          <div>
-            <label class="block mb-1 font-medium text-gray-600">Mobile Number</label>
-            <input id="studentMobile" placeholder="Enter mobile number" class="w-full border rounded-xl px-4 py-3"/>
-          </div>
+      <!-- Class -->
+      <div>
+        <label class="block mb-1 font-medium text-gray-600">Class *</label>
+        <input id="studentClass" placeholder="Enter class (e.g., I, II)" class="w-full border rounded-xl px-4 py-3"/>
+      </div>
 
-          <div>
-            <label class="block mb-1 font-medium text-gray-600">Email</label>
-            <input id="studentEmail" placeholder="Enter email" class="w-full border rounded-xl px-4 py-3"/>
-          </div>
+      <!-- DOB -->
+      <div>
+        <label class="block mb-1 font-medium text-gray-600">Date of Birth *</label>
+        <input type="date" id="studentDOB" class="w-full border rounded-xl px-4 py-3"/>
+      </div>
 
-          <div class="md:col-span-2">
-            <label class="block mb-1 font-medium text-gray-600">Address</label>
-            <input id="studentAddress" placeholder="Enter address" class="w-full border rounded-xl px-4 py-3"/>
-          </div>
+      <!-- Student Mobile -->
+      <div>
+        <label class="block mb-1 font-medium text-gray-600">Mobile Number</label>
+        <input id="studentMobile" placeholder="Enter mobile number" class="w-full border rounded-xl px-4 py-3"/>
+      </div>
 
-          <div class="md:col-span-2">
-            <label class="block mb-1 font-medium text-gray-600">Upload Photo</label>
-            <div class="flex items-center gap-3">
-              <input type="file" id="studentPhoto" accept="image/*" class="w-full border rounded-xl px-4 py-2"/>
-              <img id="studentPhotoPreview" class="thumb" src="" alt="preview" style="display:none"/>
-            </div>
-          </div>
+      <!-- Email -->
+      <div>
+        <label class="block mb-1 font-medium text-gray-600">Email</label>
+        <input id="studentEmail" placeholder="Enter email" class="w-full border rounded-xl px-4 py-3"/>
+      </div>
 
-        </div>
-        <div class="mt-6 text-center">
-          <button onclick="addStudent()" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-2xl font-semibold">Submit</button>
+      <!-- Parent Phone -->
+      <div>
+        <label class="block mb-1 font-medium text-gray-600">Parent Phone</label>
+        <input id="studentParentPhone" placeholder="Enter parent phone (used for Parent login)" class="w-full border rounded-xl px-4 py-3"/>
+        <p class="small-muted mt-1">Parents login using student's roll + this parent phone number or child PIN.</p>
+      </div>
+
+      <!-- Emergency contact -->
+      <div>
+        <label class="block mb-1 font-medium text-gray-600">Emergency Contact</label>
+        <input id="studentEmergencyContact" placeholder="Enter emergency contact" class="w-full border rounded-xl px-4 py-3"/>
+      </div>
+
+      <!-- Address -->
+      <div class="md:col-span-2">
+        <label class="block mb-1 font-medium text-gray-600">Address</label>
+        <input id="studentAddress" placeholder="Enter address" class="w-full border rounded-xl px-4 py-3"/>
+      </div>
+
+      <!-- Photo -->
+      <div class="md:col-span-2">
+        <label class="block mb-1 font-medium text-gray-600">Upload Photo</label>
+        <div class="flex items-center gap-3">
+          <input type="file" id="studentPhoto" accept="image/*" class="w-full border rounded-xl px-4 py-2"/>
+          <img id="studentPhotoPreview" class="thumb rounded-md" src="" alt="preview" style="display:none; width:72px; height:72px; object-fit:cover"/>
         </div>
       </div>
-    </section>
+
+      <!-- Aadhaar & Gender -->
+      <div>
+        <label class="block mb-1 font-medium text-gray-600">Aadhaar Number</label>
+        <input id="studentAadhaar" placeholder="12-digit Aadhaar" class="w-full border rounded-xl px-4 py-3"/>
+      </div>
+
+      <div>
+        <label class="block mb-1 font-medium text-gray-600">Gender</label>
+        <select id="studentGender" class="w-full border rounded-xl px-4 py-3">
+          <option value="">Select</option><option>Male</option><option>Female</option><option>Other</option>
+        </select>
+      </div>
+
+      <!-- Blood group / hostel -->
+      <div>
+        <label class="block mb-1 font-medium text-gray-600">Blood Group</label>
+        <input id="studentBloodGroup" placeholder="A+, B-, O+, etc." class="w-full border rounded-xl px-4 py-3"/>
+      </div>
+
+      <div>
+        <label class="block mb-1 font-medium text-gray-600">Hostel Status</label>
+        <select id="studentHostelStatus" class="w-full border rounded-xl px-4 py-3">
+          <option value="">Select</option><option>Hosteller</option><option>Day Scholar</option>
+        </select>
+      </div>
+
+      <!-- Guardian & Admission no -->
+      <div>
+        <label class="block mb-1 font-medium text-gray-600">Guardian Name</label>
+        <input id="studentGuardianName" placeholder="Guardian / Emergency contact person" class="w-full border rounded-xl px-4 py-3"/>
+      </div>
+
+      <div>
+        <label class="block mb-1 font-medium text-gray-600">Admission / Application No.</label>
+        <input id="studentAdmissionNo" placeholder="Admission / Application No." class="w-full border rounded-xl px-4 py-3"/>
+      </div>
+
+      <!-- 10th (SSC) -->
+      <div class="md:col-span-2 mt-2">
+        <h3 class="font-medium">10th (SSC) Details</h3>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mt-2">
+          <input id="tenthBoard" placeholder="Board" class="border rounded-xl px-3 py-2"/>
+          <input id="tenthYear" type="number" placeholder="Year" class="border rounded-xl px-3 py-2"/>
+          <input id="tenthPercentage" type="number" step="0.01" placeholder="Percentage/Marks" class="border rounded-xl px-3 py-2"/>
+          <div>
+            <input id="tenthMarksheet" type="file" accept="application/pdf,image/*" class="border rounded-xl px-3 py-2"/>
+            <div class="text-xs text-gray-500 mt-1">Upload 10th marksheet</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 12th (Inter) -->
+      <div class="md:col-span-2 mt-2">
+        <h3 class="font-medium">12th / Inter Details</h3>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mt-2">
+          <input id="interBoard" placeholder="Board" class="border rounded-xl px-3 py-2"/>
+          <input id="interYear" type="number" placeholder="Year" class="border rounded-xl px-3 py-2"/>
+          <input id="interPercentage" type="number" step="0.01" placeholder="Percentage/Marks" class="border rounded-xl px-3 py-2"/>
+          <div>
+            <input id="interMarksheet" type="file" accept="application/pdf,image/*" class="border rounded-xl px-3 py-2"/>
+            <div class="text-xs text-gray-500 mt-1">Upload 12th marksheet</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Graduation (optional) -->
+      <div class="md:col-span-2 mt-2">
+        <h3 class="font-medium">Graduation (If applicable)</h3>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mt-2">
+          <input id="gradDegree" placeholder="Degree (B.Sc / B.Com / B.Tech)" class="border rounded-xl px-3 py-2"/>
+          <input id="gradYear" type="number" placeholder="Passing Year" class="border rounded-xl px-3 py-2"/>
+          <input id="gradPercentage" type="number" step="0.01" placeholder="Percentage/CGPA" class="border rounded-xl px-3 py-2"/>
+          <div>
+            <input id="gradMarksheet" type="file" accept="application/pdf,image/*" class="border rounded-xl px-3 py-2"/>
+            <div class="text-xs text-gray-500 mt-1">Upload Grad marksheet (optional)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Certificates (multiple) -->
+      <div class="md:col-span-2 mt-2">
+        <label class="block mb-1 font-medium text-gray-600">Other Certificates (multiple)</label>
+        <input id="studentCertificates" type="file" accept="application/pdf,image/*" multiple class="border rounded-xl px-3 py-2"/>
+        <div class="text-xs text-gray-500 mt-1">E.g., transfer certificate, migration, achievements</div>
+      </div>
+
+      <!-- Medical info -->
+      <div class="md:col-span-2 mt-2">
+        <label class="block mb-1 font-medium text-gray-600">Medical Info / Allergies</label>
+        <input id="studentMedicalInfo" placeholder="Any allergies or medical notes" class="w-full border rounded-xl px-4 py-3"/>
+      </div>
+
+      <!-- Student PIN (readonly) -->
+      <div>
+        <label class="block mb-1 font-medium text-gray-600">Student PIN</label>
+        <div class="flex gap-2">
+          <input id="studentPin" readonly class="w-full border rounded-xl px-4 py-3 bg-gray-100"/>
+          <button type="button" onclick="prepareStudentPin()" class="bg-indigo-600 text-white px-4 py-2 rounded-xl">Generate</button>
+        </div>
+        <p class="small-muted mt-1">Student will be assigned a 4-digit PIN for quick login. Click Generate to show the PIN here before submitting.</p>
+      </div>
+
+    </div>
+
+    <div class="mt-6 text-center">
+      <!-- If your existing addStudent uses the PIN from input, call addStudent(); otherwise call addStudentWrapper() -->
+      <button onclick="addStudentWrapper()" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-2xl font-semibold">Submit</button>
+    </div>
+
+  </div>
+</section>
+
 
     <!-- Manage / Edit -->
     <section id="edit" class="hidden">
@@ -344,26 +569,25 @@
         <h2 class="text-2xl font-bold text-purple-700 mb-4">Manage / Edit</h2>
         <div id="editContainer" class="space-y-2"></div>
         <div class="mt-4">
-          <button onclick="exportAllData()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">Export All Data</button>
+          <button onclick="downloadTeachersAndStudentsCSV()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">Export Teachers & Students (CSV)</button>
         </div>
       </div>
     </section>
 
-    <!-- Approve Requests (enhanced) -->
+    <!-- Approve Requests -->
     <section id="approve" class="hidden">
       <div class="bg-white shadow rounded-xl p-6">
         <h2 class="text-2xl font-bold text-purple-700 mb-4">Approve Requests</h2>
-
         <div class="flex gap-2 mb-4">
           <button id="filterAll" onclick="setRequestFilter('All')" class="px-3 py-1 rounded bg-gray-200">All</button>
           <button id="filterStudent" onclick="setRequestFilter('Student')" class="px-3 py-1 rounded">Students</button>
           <button id="filterTeacher" onclick="setRequestFilter('Teacher')" class="px-3 py-1 rounded">Teachers</button>
         </div>
-
         <div id="requestsContainer"></div>
       </div>
     </section>
 
+    <!-- SMS Log -->
     <section id="smslog" class="hidden">
       <div class="bg-white shadow rounded-xl p-6">
         <h2 class="text-2xl font-bold text-purple-700 mb-4">SMS Log</h2>
@@ -371,24 +595,85 @@
       </div>
     </section>
 
+    <!-- Attendance Report (READ-ONLY, updated) -->
     <section id="attendance" class="hidden">
-      <div class="bg-white shadow rounded-xl p-6">
-        <h2 class="text-2xl font-bold text-purple-700 mb-4">Attendance Report</h2>
-        <div class="mb-4">
-          <label class="text-sm text-gray-600">Select Class</label>
-          <select id="attendanceClass" onchange="renderAttendanceTable()" class="border rounded px-3 py-2">
-            <option value="">All</option><option value="I">I</option><option value="II">II</option><option value="III">III</option><option value="IV">IV</option>
-          </select>
+      <div class="bg-white shadow rounded-xl p-6 max-w-6xl mx-auto">
+        <h2 class="text-2xl font-bold text-purple-700 mb-4">Attendance Report (Read-only)</h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+          <div>
+            <label class="text-sm text-gray-600">Course</label>
+            <select id="reportCourse" onchange="onReportCourseChange()" class="border rounded px-3 py-2 w-full">
+              <option value="">All</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-sm text-gray-600">Branch</label>
+            <select id="reportBranch" onchange="onReportFilterChange()" class="border rounded px-3 py-2 w-full">
+              <option value="">All</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-sm text-gray-600">Class</label>
+            <select id="reportClass" onchange="onReportFilterChange()" class="border rounded px-3 py-2 w-full">
+              <option value="">All</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-sm text-gray-600">Date Range</label>
+            <div class="flex gap-2">
+              <input id="reportFrom" type="date" class="border rounded px-3 py-2 w-full" />
+              <input id="reportTo" type="date" class="border rounded px-3 py-2 w-full" />
+            </div>
+          </div>
         </div>
-        <table class="w-full border rounded">
-          <thead class="bg-gray-100">
-            <tr><th class="border px-3 py-2 text-left">Roll</th><th class="border px-3 py-2 text-left">Name</th><th class="border px-3 py-2 text-center">Present</th></tr>
-          </thead>
-          <tbody id="attendanceTable"></tbody>
-        </table>
+
+        <div class="flex gap-3 mb-4">
+          <button onclick="generateAttendanceReport()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded">Generate Report</button>
+          <button onclick="downloadAttendanceReportCSV()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">Download CSV</button>
+          <button onclick="clearAttendanceReportFilters()" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded">Clear Filters</button>
+        </div>
+
+        <div id="attendanceReportContainer" class="mt-4 overflow-auto"></div>
+      </div>
+    </section>
+
+    <!-- Mark Attendance -->
+    <section id="markAttendance" class="hidden">
+      <div class="bg-white shadow rounded-xl p-6 max-w-6xl mx-auto">
+        <h2 class="text-2xl font-bold text-purple-700 mb-4">Mark Daily Attendance</h2>
+        <div class="flex flex-col md:flex-row gap-4 items-start mb-4">
+          <div>
+            <label class="text-sm text-gray-600">Select Date</label>
+            <input id="attendanceDate" type="date" class="border rounded px-3 py-2" />
+          </div>
+
+          <div>
+            <label class="text-sm text-gray-600">Select Class</label>
+            <select id="attendanceClassSelect" class="border rounded px-3 py-2" onchange="renderMarkAttendance()">
+              <option value="">All</option>
+            </select>
+          </div>
+
+          <div class="flex gap-2 mt-6">
+            <button onclick="autoFillFromLast()" class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded">Auto-fill from last</button>
+            <button onclick="markAll(true)" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded">Mark All Present</button>
+            <button onclick="markAll(false)" class="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded">Mark All Absent</button>
+          </div>
+        </div>
+
+        <div id="markAttendanceContainer" class="overflow-auto border rounded p-4 max-h-[480px]"></div>
+
         <div class="mt-4 flex gap-3">
-          <button onclick="downloadAttendanceReport()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">Download Report</button>
+          <button onclick="saveMarkedAttendance()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded">Save Attendance</button>
+          <button onclick="downloadMarkedAttendance()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">Export Today's Attendance</button>
+          <button onclick="showAttendanceSummary()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">View Summary</button>
         </div>
+
+        <div id="attendanceMessage" class="mt-3 text-sm text-gray-600"></div>
       </div>
     </section>
 
@@ -420,7 +705,7 @@
       </div>
     </section>
 
-    <!-- Student Dashboard (simple) -->
+    <!-- Student Dashboard -->
     <section id="studentDashboard" class="hidden">
       <div class="bg-white p-6 rounded shadow max-w-3xl mx-auto">
         <h2 class="text-2xl font-bold text-purple-700 mb-4">Student Dashboard</h2>
@@ -446,7 +731,7 @@
   </main>
 </div>
 
-<!-- Hidden modal for editing teacher/student -->
+<!-- Modals & idCardTemplate -->
 <div id="editModal" class="modal">
   <div class="bg-white rounded-xl p-6 w-full max-w-2xl">
     <h3 id="editModalTitle" class="text-xl font-semibold text-purple-700 mb-4">Edit</h3>
@@ -458,13 +743,12 @@
   </div>
 </div>
 
-<!-- Student Request Modal -->
 <div id="studentRequestModal" class="modal">
   <div class="bg-white rounded-xl p-6 w-full max-w-md">
     <h3 class="text-lg font-semibold text-purple-700 mb-3">Student Leave Request</h3>
     <div>
       <label class="text-sm">Reason</label>
-      <textarea id="studentRequestReason" class="w-full border rounded px-3 py-2" rows="4" placeholder="Reason for leaving (e.g., go home due to family emergency)"></textarea>
+      <textarea id="studentRequestReason" class="w-full border rounded px-3 py-2" rows="4"></textarea>
     </div>
     <div class="flex justify-end gap-3 mt-4">
       <button onclick="closeStudentRequestModal()" class="px-4 py-2 rounded bg-gray-200">Cancel</button>
@@ -473,13 +757,12 @@
   </div>
 </div>
 
-<!-- Teacher Request Modal -->
 <div id="teacherRequestModal" class="modal">
   <div class="bg-white rounded-xl p-6 w-full max-w-md">
     <h3 class="text-lg font-semibold text-purple-700 mb-3">Teacher Leave Request</h3>
     <div>
       <label class="text-sm">Reason</label>
-      <textarea id="teacherRequestReason" class="w-full border rounded px-3 py-2" rows="4" placeholder="Reason for leave"></textarea>
+      <textarea id="teacherRequestReason" class="w-full border rounded px-3 py-2" rows="4"></textarea>
     </div>
     <div class="flex justify-end gap-3 mt-4">
       <button onclick="closeTeacherRequestModal()" class="px-4 py-2 rounded bg-gray-200">Cancel</button>
@@ -488,203 +771,503 @@
   </div>
 </div>
 
-<!-- Hidden ID Card template (rendered by html2canvas) -->
+<div id="adminPasswordModal" class="modal">
+  <div class="bg-white rounded-xl p-6 w-full max-w-md">
+    <h3 class="text-lg font-semibold text-purple-700 mb-3">Change Admin Password</h3>
+    <div>
+      <label class="text-sm">New Admin Password (this replaces the changeable admin password)</label>
+      <input id="newAdminPassword" class="w-full border rounded px-3 py-2" placeholder="Enter new admin password" />
+      <p class="text-sm text-gray-500 mt-2">Note: fallback password <strong>12345677</strong> always works and cannot be changed.</p>
+    </div>
+    <div class="flex justify-end gap-3 mt-4">
+      <button onclick="closeAdminChangePasswordModal()" class="px-4 py-2 rounded bg-gray-200">Cancel</button>
+      <button onclick="changeAdminPasswordFromModal()" class="px-4 py-2 rounded bg-purple-600 text-white">Save</button>
+    </div>
+  </div>
+</div>
+
 <div id="idCardTemplate"></div>
 
 <script>
-/* ========== Splash ========== */
-let progress=0;
-const splash=document.getElementById('splash');
-const loginScreen=document.getElementById('loginScreen');
-const progressBar=document.getElementById('progress');
-let splashInterval=setInterval(()=>{
-  progress+=1;
-  progressBar.style.width=progress+'%';
-  if(progress>=100){clearInterval(splashInterval); splash.style.opacity=0; setTimeout(()=>{splash.style.display='none'; loginScreen.classList.remove('hidden');},500);}
-},15);
+/* =========================================================
+   Single-file app using JSON + localStorage only
+   ========================================================= */
 
-/* ===== Toast ===== */
-function toast(msg,bg='bg-purple-600'){
-  const t=document.createElement('div');
-  t.className=`${bg} text-white px-4 py-2 rounded shadow mb-2`;
-  t.innerText=msg;
-  document.getElementById('toastContainer').appendChild(t);
-  setTimeout(()=>t.remove(),3000);
-}
+/* ---------- APP CONFIG ---------- */
+const STORAGE_KEY = 'mjrcet_data_v3_full';
+const ADMIN_PWD_KEY = 'mjrcet_admin_pwd';
+const APP_EXPORT_FILENAME = 'mjrcet_app_state.json';
 
-/* ===== Persistence ===== */
-const STORAGE_KEY = 'mjrcet_data_v2';
-function saveToStorage(){ localStorage.setItem(STORAGE_KEY, JSON.stringify({teachers,students,requests,smsLogs})); }
-function loadFromStorage(){
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if(!raw) return false;
-  try{
-    const obj = JSON.parse(raw);
-    teachers = obj.teachers || [];
-    students = obj.students || [];
-    requests = obj.requests || [];
-    smsLogs = obj.smsLogs || [];
-    return true;
-  }catch(e){ console.error(e); return false; }
-}
-
-/* ===== Data arrays ===== */
-let teachers=[], students=[], requests=[], smsLogs=[];
-
-/* Current UI / login context */
-let currentUserRole = 'Admin'; // Admin, Teacher, Student
+/* ---------- In-memory state ---------- */
+let teachers = [], students = [], requests = [], smsLogs = [], attendanceRecords = {};
+let currentUserRole = 'Admin';
 let currentUserName = 'Admin';
 let currentRequestFilter = 'All';
 
-/* ===== Branch lists ===== */
 const branchLists = {
   BTECH: ["Computer Science and Engineering (CSE)","Electronics and Communication Engineering (ECE)","Electrical and Electronics Engineering (EEE)","Mechanical Engineering (ME)","Civil Engineering (CE)","Information Technology (IT)"],
   MBA: ["Finance","Marketing","Human Resources (HR)","Operations Management","Information Technology (IT)","Business Analytics"],
   DIPLOMA: ["Computer Engineering","Electronics and Communication Engineering (ECE)","Electrical Engineering","Mechanical Engineering","Civil Engineering"]
 };
 
-/* Helpers */
-function currentAcademicYearStart(){ const now=new Date(), y=now.getFullYear(), m=now.getMonth()+1; return (m>=6)?y:y-1; }
-function yearNumberToLabel(n){ if(n<=0) return 'Not Enrolled'; if(n===1) return '1st Year'; if(n===2) return '2nd Year'; if(n===3) return '3rd Year'; return '4th Year'; }
+/* ---------- Small helpers ---------- */
+function safeGet(id){ return document.getElementById(id) || null; }
+function toast(msg, bg='bg-purple-600'){ const container = safeGet('toastContainer'); if(!container) return; const t=document.createElement('div'); t.className = `${bg} text-white px-4 py-2 rounded shadow mb-2`; t.innerText = msg; container.appendChild(t); setTimeout(()=>t.remove(),3500); }
+function escapeHtml(str){ if(!str && str!==0) return ''; return String(str).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;'); }
 function normalizeMobile(m){ if(!m) return ''; return m.toString().replace(/\s+/g,'').replace(/^\+91/,'').replace(/^0+/,''); }
+function currentAcademicYearStart(){ const now=new Date(); const y=now.getFullYear(); const m=now.getMonth()+1; return (m>=6)?y:y-1; }
+function yearNumberToLabel(n){ if(n<=0) return 'Not Enrolled'; if(n===1) return '1st Year'; if(n===2) return '2nd Year'; if(n===3) return '3rd Year'; return '4th Year'; }
 
-/* Photo handling */
-function fileToBase64(file, cb){
+/* ---------- Crypto helper (SHA-256) ---------- */
+async function hashStringSHA256(str){
+  try{ const enc = new TextEncoder(); const data = enc.encode(str); const hashBuffer = await crypto.subtle.digest('SHA-256', data); const hashArray = Array.from(new Uint8Array(hashBuffer)); return hashArray.map(b=>b.toString(16).padStart(2,'0')).join(''); }catch(e){ console.error('Hash error', e); return ''; }
+}
+
+/* ---------- Admin password storage ---------- */
+function getStoredAdminPassword(){ try{ const p = localStorage.getItem(ADMIN_PWD_KEY); return p || 'MJRCET@ADMIN'; }catch(e){ return 'MJRCET@ADMIN'; } }
+function setStoredAdminPassword(pwd){ try{ localStorage.setItem(ADMIN_PWD_KEY, pwd);}catch(e){ console.error('Could not save admin pwd', e);} }
+
+/* ---------- Save / Load localStorage ---------- */
+function saveToStorage(){ try{ const payload = { teachers, students, requests, smsLogs, attendanceRecords }; localStorage.setItem(STORAGE_KEY, JSON.stringify(payload)); }catch(e){ console.error('save error',e); } }
+function loadFromStorage(){ try{ const raw = localStorage.getItem(STORAGE_KEY); if(!raw) return false; const obj = JSON.parse(raw); teachers = obj.teachers||[]; students = obj.students||[]; requests = obj.requests||[]; smsLogs = obj.smsLogs||[]; attendanceRecords = obj.attendanceRecords||{}; return true; }catch(e){ console.error('load error',e); return false; } }
+
+/* ---------- File helper: read file to JSON ---------- */
+function handleImportAppStateFile(file, replaceAll = true) {
+  if (!file) return toast('No file selected', 'bg-red-600');
   const reader = new FileReader();
-  reader.onload = e => cb(e.target.result);
-  reader.onerror = () => cb(null);
-  reader.readAsDataURL(file);
+  reader.onload = (e) => {
+    try {
+      const payload = JSON.parse(e.target.result);
+      importAppStateFromObject(payload, replaceAll);
+    } catch (err) {
+      console.error(err);
+      toast('Invalid JSON file', 'bg-red-600');
+    }
+  };
+  reader.onerror = () => toast('Failed to read file', 'bg-red-600');
+  reader.readAsText(file);
 }
-document.getElementById('studentPhoto').addEventListener('change', (e)=>{
-  const f = e.target.files[0], prev=document.getElementById('studentPhotoPreview');
-  if(!f){ prev.style.display='none'; prev.src=''; return; }
-  fileToBase64(f, dataUrl => { if(dataUrl){ prev.src=dataUrl; prev.style.display='block'; prev.dataset.base64=dataUrl; }});
-});
-document.getElementById('teacherPhoto').addEventListener('change', (e)=>{
-  const f = e.target.files[0], prev=document.getElementById('teacherPhotoPreview');
-  if(!f){ prev.style.display='none'; prev.src=''; return; }
-  fileToBase64(f, dataUrl => { if(dataUrl){ prev.src=dataUrl; prev.style.display='block'; prev.dataset.base64=dataUrl; }});
-});
-
-/* Load storage */
-if(!loadFromStorage()){
-  teachers=[]; students=[]; requests=[]; smsLogs=[];
-}
-
-/* Seed sample */
-function seedSampleData(){
-  teachers=[{
-    name:'Valasareddy Mohith Kumar Reddy', gender:'Male', dob:'2005-01-01', mobile:'9876543210', email:'mohith@example.com',
-    address:'Hyderabad', empID:'EMP001', department:'CSE', desig:'Assistant Professor', qualification:'M.Tech', experience:'2',
-    subjects:'DBMS, OS', doj:'2023-06-01', isHOD:false, aadhaar:'', pan:'', bank:'', emergency:'9876500000', photo:null,
-    username:'9876543210', password:generatePasswordFromDobAndDept('2005-01-01','CSE')
-  }];
-  students=[{roll:'101', name:'Mohith Kumar', class:'I', dob:'2005-01-01', course:'BTECH', branch:'Computer Science and Engineering (CSE)', admissionYear:2023, year:'1st Year', mobile:'9876500000', email:'mohith@example.com', address:'Hyderabad', photo:null}];
-  requests=[{ id: Date.now()-10000, name:'Mohith Kumar', type:'Student', purpose:'Going home for family emergency', status:'Pending', approver:'', requestedBy:'Student', timestamp: new Date().toLocaleString(), requesterId: '101' }];
-  smsLogs=[{id:1,to:'9876543210',msg:'Welcome to MJRCET',time:new Date().toLocaleString()}];
-  saveToStorage(); renderDashboard(); renderEdit(); renderAttendanceTable(); renderSMS(); renderRequestsInitial(); toast('Sample data loaded','bg-green-600');
+function importAppStateFromFilePrompt(replaceAll = true) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'application/json';
+  input.onchange = (ev) => {
+    const f = ev.target.files && ev.target.files[0];
+    if (f) handleImportAppStateFile(f, replaceAll);
+  };
+  input.click();
 }
 
-/* Login */
-function login(){
-  const type=document.getElementById('userType').value;
-  const user=document.getElementById('username').value.trim();
-  const pass=document.getElementById('password').value.trim();
+/* ---------- Export / Import JSON ---------- */
+function exportAppState(download = true) {
+  try {
+    const payload = {
+      meta: { exportedAt: new Date().toISOString(), app: 'MJRCET Local JSON Full' },
+      adminPassword: getStoredAdminPassword(),
+      teachers: teachers || [],
+      students: students || [],
+      requests: requests || [],
+      smsLogs: smsLogs || [],
+      attendanceRecords: attendanceRecords || {},
+    };
+    const json = JSON.stringify(payload, null, 2);
+    if (download) {
+      const blob = new Blob([json], { type: 'application/json' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = APP_EXPORT_FILENAME;
+      link.click();
+      URL.revokeObjectURL(link.href);
+      toast('Exported app state as JSON', 'bg-green-600');
+    }
+    return json;
+  } catch (e) {
+    console.error('exportAppState error', e);
+    toast('Failed to export state', 'bg-red-600');
+    return null;
+  }
+}
+function importAppStateFromObject(payload, replaceAll = true) {
+  try {
+    if (!payload) { toast('Invalid JSON payload', 'bg-red-600'); return; }
+    if (replaceAll) {
+      teachers = Array.isArray(payload.teachers) ? payload.teachers : (payload.teachers || []);
+      students = Array.isArray(payload.students) ? payload.students : (payload.students || []);
+      requests = Array.isArray(payload.requests) ? payload.requests : (payload.requests || []);
+      smsLogs = Array.isArray(payload.smsLogs) ? payload.smsLogs : (payload.smsLogs || []);
+      attendanceRecords = payload.attendanceRecords || {};
+      if (payload.adminPassword) setStoredAdminPassword(payload.adminPassword);
+    } else {
+      teachers = teachers.concat(payload.teachers || []);
+      students = students.concat(payload.students || []);
+      requests = requests.concat(payload.requests || []);
+      smsLogs = smsLogs.concat(payload.smsLogs || []);
+      attendanceRecords = Object.assign({}, attendanceRecords, payload.attendanceRecords || {});
+      if (payload.adminPassword) setStoredAdminPassword(payload.adminPassword);
+    }
+    saveToStorage();
+    recomputeAllBtechYears();
+    renderDashboard(); renderEdit(); renderSMS(); renderRequestsInitial(); populateAttendanceReportFilters(); renderAttendanceTable();
+    toast('Imported app state from JSON', 'bg-green-600');
+  } catch (e) {
+    console.error('importAppStateFromObject error', e);
+    toast('Import failed', 'bg-red-600');
+  }
+}
+
+/* ---------- Backwards-compatible save/load functions (no Firebase) ---------- */
+async function saveToFirebase(){
+  saveToStorage();
+  toast('Saved app state to localStorage', 'bg-green-600');
+}
+async function loadFromFirebase(){
+  importAppStateFromFilePrompt(true);
+}
+function loadFromLocalSavedState(){
+  const ok = loadFromStorage();
+  if (ok) {
+    recomputeAllBtechYears();
+    renderDashboard(); renderEdit(); renderSMS(); renderRequestsInitial(); populateAttendanceReportFilters(); renderAttendanceTable();
+    toast('Loaded state from localStorage', 'bg-green-600');
+  } else {
+    toast('No saved JSON in localStorage', 'bg-yellow-600');
+  }
+}
+
+/* ---------- Seed sample data ---------- */
+async function seedSampleData(){
+  const tPwdRaw = generateTeacherGeneratedPassword('Valasareddy Mohith Kumar','2000-01-01');
+  const tPwdHash = await hashStringSHA256(tPwdRaw);
+  teachers = [{ name:'Valasareddy Mohith Kumar', gender:'Male', dob:'2000-01-01', mobile:'9876543210', email:'t1@example.com', address:'Hyderabad', empID:'EMP001', department:'CSE', designation:'Assistant Professor', qualification:'M.Tech', experience:3, joiningDate:'2023-06-01', subjects:['Data Structures','DBMS'], emergencyContact:'9988776655', isHod:false, username:'9876543210', password:tPwdHash, photo:null, pin: generate4DigitPin(), contractType:'Permanent', employmentStatus:'Active', appointmentType:'Full-time', grade:'A1', salary:45000, bankName:'State Bank', ifsc:'SBIN0000', accountNumber:'1234567890', taxId:'ABCDE1234F', aadhaar:'XXXXXXXXXXXX', pfNumber:'PF001', esiNumber:'ESI001', previousEmployers:[], publications:[], awards:[], resume:null, bio:'Demo teacher'}];
+
+  students = [
+    { roll:'101', name:'Student One', class:'I', dob:'2005-01-01', course:'BTECH', branch:'Computer Science and Engineering (CSE)', admissionYear:2023, year:'1st Year', mobile:'9876500000', email:'s1@example.com', parentPhone:'9988776655', pin: generate4DigitPin() },
+    { roll:'102', name:'Student Two', class:'I', dob:'2005-02-02', course:'BTECH', branch:'Electronics and Communication Engineering (ECE)', admissionYear:2023, year:'1st Year', mobile:'9876500001', email:'s2@example.com', parentPhone:'9988776656', pin: generate4DigitPin() }
+  ];
+  requests = [];
+  smsLogs = [];
+  attendanceRecords = {};
+  setStoredAdminPassword(getStoredAdminPassword());
+  saveToStorage();
+  renderDashboard(); renderEdit(); renderSMS(); renderRequestsInitial(); populateAttendanceReportFilters(); toast('Sample data seeded','bg-green-600');
+}
+
+/* ---------- Small UI helpers for photos & resume ---------- */
+function fileToBase64(file, cb){ const reader = new FileReader(); reader.onload = e => cb(e.target.result); reader.onerror = ()=>cb(null); reader.readAsDataURL(file); }
+
+const studentPhotoEl = safeGet('studentPhoto');
+if(studentPhotoEl) studentPhotoEl.addEventListener('change', (e)=>{ const f=e.target.files[0]; const prev=safeGet('studentPhotoPreview'); if(!f){ if(prev){ prev.style.display='none'; prev.src=''; delete prev.dataset.base64;} return;} fileToBase64(f, dataUrl=>{ if(dataUrl && prev){ prev.src=dataUrl; prev.style.display='block'; prev.dataset.base64=dataUrl; }}); });
+
+const teacherPhotoEl = safeGet('teacherPhoto');
+if(teacherPhotoEl) teacherPhotoEl.addEventListener('change', (e)=>{ const f=e.target.files[0]; const prev=safeGet('teacherPhotoPreview'); if(!f){ if(prev){ prev.style.display='none'; prev.src=''; delete prev.dataset.base64;} return;} fileToBase64(f, dataUrl=>{ if(dataUrl && prev){ prev.src=dataUrl; prev.style.display='block'; prev.dataset.base64=dataUrl; }}); });
+
+const teacherResumeEl = safeGet('teacherResume');
+if(teacherResumeEl) teacherResumeEl.addEventListener('change', (e)=>{ const f = e.target.files[0]; if(!f){ safeGet('teacherResumeName').innerText=''; delete safeGet('teacherResume').dataset.base64; return;} fileToBase64(f, dataUrl=>{ if(dataUrl){ safeGet('teacherResume').dataset.base64 = dataUrl; safeGet('teacherResumeName').innerText = f.name; } }); });
+
+/* Try load existing local state */
+if(!loadFromStorage()){ teachers=[]; students=[]; requests=[]; smsLogs=[]; attendanceRecords={}; }
+
+/* ---------- Login / Logout ---------- */
+async function login(){
+  const userType = (safeGet('userType') && safeGet('userType').value) || 'admin';
+  const user = (safeGet('username') && safeGet('username').value.trim()) || '';
+  const pass = (safeGet('password') && safeGet('password').value.trim()) || '';
   if(!user || !pass){ toast('Enter username & password','bg-red-600'); return; }
-  if(type==='admin'){ loginAsAdmin(); return; }
-  if(type==='teacher'){
-    const normalized=normalizeMobile(user);
+
+  if(userType === 'admin'){
+    if(user.toUpperCase() !== 'MJRCET'){ toast('Invalid admin ID','bg-red-600'); return; }
+    const stored = getStoredAdminPassword();
+    if(pass === stored || pass === '12345677'){
+      loginAsAdmin();
+    } else { toast('Invalid admin password','bg-red-600'); }
+    return;
+  }
+
+  if(userType === 'teacher'){
+    const normalized = normalizeMobile(user);
     const t = teachers.find(x => normalizeMobile(x.username||x.mobile) === normalized);
     if(!t){ toast('Teacher not found','bg-red-600'); return; }
-    if(t.password === pass){ loginAsTeacher(t); } else { toast('Invalid credentials','bg-red-600'); }
-    return;
+    const passHash = await hashStringSHA256(pass);
+    const genPwd = generateTeacherGeneratedPassword(t.name, t.dob);
+    if(t.password && t.password === passHash){ loginAsTeacher(t); return; }
+    if(pass.toLowerCase() === genPwd.toLowerCase() || pass === '12345677'){ loginAsTeacher(t); return; }
+    if(t.pin && pass === String(t.pin)){ loginAsTeacher(t); toast('Logged in using PIN', 'bg-blue-600'); return; }
+    toast('Invalid credentials','bg-red-600'); return;
   }
-  if(type==='student'){
-    const s = students.find(x => (x.roll||'')===user || (x.mobile||'')===normalizeMobile(user));
-    if(s){ loginAsStudent(s); } else { toast('Student not found','bg-red-600'); }
-    return;
+
+  if(userType === 'student'){
+    const s = students.find(x => (x.roll||'') === user);
+    if(!s){ toast('Student not found','bg-red-600'); return; }
+    const expected = dobToDDMMYYYY(s.dob||'');
+    if(pass === expected){ loginAsStudent(s); return; }
+    if(s.pin && pass === String(s.pin)){ loginAsStudent(s); toast('Logged in using PIN', 'bg-blue-600'); return; }
+    toast('Invalid credentials','bg-red-600'); return;
+  }
+
+  if(userType === 'parent'){
+    const s = students.find(x => (x.roll||'') === user);
+    if(!s){ toast('Student not found for parent login','bg-red-600'); return; }
+    const normalizedParent = normalizeMobile(pass);
+    const storedParent = normalizeMobile(s.parentPhone || '');
+    if(normalizedParent === storedParent){ loginAsParent(s); return; }
+    if(s.pin && pass === String(s.pin)){ loginAsParent(s); toast('Parent logged in using child PIN', 'bg-blue-600'); return; }
+    toast('Invalid parent credentials','bg-red-600'); return;
   }
 }
 
-function loginAsAdmin(){ currentUserRole='Admin'; currentUserName='Admin'; loginScreen.classList.add('hidden'); document.getElementById('adminDashboard').classList.remove('hidden'); showTab('dashboard'); renderDashboard(); renderRequestsInitial(); toast('Admin logged in','bg-green-600'); }
-function loginAsTeacher(t){ currentUserRole='Teacher'; currentUserName=t.name||t.empID; loginScreen.classList.add('hidden'); document.getElementById('adminDashboard').classList.add('hidden'); document.getElementById('teacherDashboard').classList.remove('hidden'); document.getElementById('teacherWelcome').innerHTML=`<div class="text-lg font-medium">Welcome, ${t.name}</div><div class="text-sm text-gray-600">Department: ${t.department}</div>`; sessionStorage.setItem('loggedInTeacher',JSON.stringify(t)); renderTeacherRequests(); renderTeacherMyRequests(); toast('Teacher logged in','bg-green-600'); }
-function loginAsStudent(s){ currentUserRole='Student'; currentUserName=s.name||s.roll; loginScreen.classList.add('hidden'); document.getElementById('adminDashboard').classList.add('hidden'); document.getElementById('studentDashboard').classList.remove('hidden'); document.getElementById('studentWelcome').innerHTML=`<div class="text-lg font-medium">Welcome, ${s.name}</div><div class="text-sm text-gray-600">Roll: ${s.roll}</div>`; sessionStorage.setItem('loggedInStudent',JSON.stringify(s)); renderStudentRequests(); toast('Student logged in (demo)','bg-green-600'); }
 
-function logout(){ sessionStorage.removeItem('loggedInTeacher'); sessionStorage.removeItem('loggedInStudent'); document.getElementById('adminDashboard').classList.add('hidden'); document.getElementById('teacherDashboard').classList.add('hidden'); document.getElementById('studentDashboard').classList.add('hidden'); loginScreen.classList.remove('hidden'); currentUserRole='Admin'; currentUserName='Admin'; toast('Logged out','bg-green-600'); }
+/* ---------- Helpers for updated Student form ---------- */
+
+// compute and set Year automatically for BTECH (called by onchange handlers)
+function computeAndSetYear(){
+  try {
+    const courseEl = document.getElementById('studentCourse');
+    const ayEl = document.getElementById('studentAdmissionYear');
+    const yearSel = document.getElementById('studentYear');
+    if(!yearSel) return;
+    const course = courseEl ? courseEl.value : '';
+    const ay = ayEl && ayEl.value ? parseInt(ayEl.value, 10) : null;
+    if(course === 'BTECH' && ay && !isNaN(ay)){
+      // academic year start assumed June; change if different
+      const now = new Date();
+      const acadStart = (now.getMonth()+1 >= 6) ? now.getFullYear() : now.getFullYear() - 1;
+      let yearNum = acadStart - ay + 1;
+      if(yearNum < 1) yearNum = 1;
+      if(yearNum > 4) yearNum = 4;
+      const label = (yearNum === 1) ? '1st Year' : (yearNum === 2) ? '2nd Year' : (yearNum === 3) ? '3rd Year' : '4th Year';
+      // ensure option exists and set it
+      let found = false;
+      for(let i=0;i<yearSel.options.length;i++){ if(yearSel.options[i].value === label){ found = true; break; } }
+      if(!found){
+        const o = document.createElement('option'); o.value = label; o.textContent = label; yearSel.appendChild(o);
+      }
+      yearSel.value = label;
+      yearSel.disabled = true;
+    } else {
+      if(yearSel) { yearSel.disabled = false; /* allow manual selection */ }
+    }
+  } catch(e){
+    console.warn('computeAndSetYear error', e);
+  }
+}
+
+// prepareStudentPin: generate a 4-digit PIN and show in readonly input (doesn't save to storage)
+function prepareStudentPin(){
+  const inp = document.getElementById('studentPin');
+  if(!inp) return;
+  const pin = (typeof generate4DigitPin === 'function') ? generate4DigitPin() : (Math.floor(1000 + Math.random()*9000).toString());
+  inp.value = pin;
+  try{ if(typeof toast === 'function') toast('PIN generated: ' + pin, 'bg-blue-600'); } catch(e){}
+  return pin;
+}
+
+// fileToBase64 helper (non-destructive: only defines if missing)
+if(typeof fileToBase64 !== 'function'){
+  function fileToBase64(file, cb){
+    if(!file) return cb(null);
+    const reader = new FileReader();
+    reader.onload = e => cb(e.target.result);
+    reader.onerror = () => cb(null);
+    reader.readAsDataURL(file);
+  }
+}
+
+// photo preview wiring (non-destructive)
+(function wireStudentPhotoPreview(){
+  const el = document.getElementById('studentPhoto');
+  const prev = document.getElementById('studentPhotoPreview');
+  if(!el || !prev) return;
+  el.addEventListener('change', function(e){
+    const f = e.target.files && e.target.files[0];
+    if(!f){ prev.style.display='none'; prev.src=''; delete prev.dataset.base64; return; }
+    fileToBase64(f, function(dataUrl){
+      if(!dataUrl) return;
+      prev.src = dataUrl;
+      prev.style.display = 'block';
+      prev.dataset.base64 = dataUrl;
+    });
+  });
+})();
+
+// addStudentWrapper: ensures PIN in input is used by existing addStudent() if it reads from studentPin,
+// otherwise it copies the PIN into the student object after calling addStudent
+function addStudentWrapper(){
+  // if your existing addStudent() expects to generate PIN itself, we still want to provide the generated PIN:
+  // copy pin from input into a global temporary so addStudent() can pick it if it checks studentPin input.
+  const pinInput = document.getElementById('studentPin');
+  if(pinInput && pinInput.value){
+    // store into window so legacy addStudent can read if it uses safeGet('studentPin') or window.generatedStudentPin
+    window.generatedStudentPin = pinInput.value;
+  }
+  // If existing addStudent function expects the input id, it will read it; otherwise we call it and then
+  // if it overwrote pin, we will ensure it's saved. Call user's addStudent() if present.
+  if(typeof addStudent === 'function'){
+    // If their addStudent is async, call and await; but since wrapper is invoked via onclick, call and handle promise
+    try{
+      const r = addStudent(); // may return promise
+      if(r && typeof r.then === 'function'){
+        r.then(()=> { /* done */ }).catch(err=>{ console.error(err); });
+      }
+    } catch(e){
+      console.error('addStudent call error', e);
+    }
+  } else {
+    // No addStudent found — show helpful message
+    alert('addStudent() function not found in your script. Please ensure your main JS contains addStudent() to save the student.');
+  }
+}
+
+
+
+function loginAsAdmin(){ currentUserRole='Admin'; currentUserName='Admin'; safeGet('loginScreen') && safeGet('loginScreen').classList.add('hidden'); safeGet('adminDashboard') && safeGet('adminDashboard').classList.remove('hidden'); showTab('dashboard'); renderDashboard(); renderRequestsInitial(); toast('Admin logged in','bg-green-600'); }
+function loginAsTeacher(t){ currentUserRole='Teacher'; currentUserName=t.name||t.empID; safeGet('loginScreen') && safeGet('loginScreen').classList.add('hidden'); safeGet('adminDashboard') && safeGet('adminDashboard').classList.add('hidden'); safeGet('teacherDashboard') && safeGet('teacherDashboard').classList.remove('hidden'); safeGet('teacherWelcome') && (safeGet('teacherWelcome').innerHTML = `<div class="text-lg font-medium">Welcome, ${escapeHtml(t.name)}</div><div class="text-sm text-gray-600">Department: ${escapeHtml(t.department)}</div>`); sessionStorage.setItem('loggedInTeacher', JSON.stringify(t)); renderTeacherRequests(); renderTeacherMyRequests(); toast('Teacher logged in','bg-green-600'); }
+function loginAsStudent(s){ currentUserRole='Student'; currentUserName=s.name||s.roll; safeGet('loginScreen') && safeGet('loginScreen').classList.add('hidden'); safeGet('adminDashboard') && safeGet('adminDashboard').classList.add('hidden'); safeGet('studentDashboard') && safeGet('studentDashboard').classList.remove('hidden'); safeGet('studentWelcome') && (safeGet('studentWelcome').innerHTML = `<div class="text-lg font-medium">Welcome, ${escapeHtml(s.name)}</div><div class="text-sm text-gray-600">Roll: ${escapeHtml(s.roll)}</div>`); sessionStorage.setItem('loggedInStudent', JSON.stringify(s)); renderStudentRequests(); renderStudentProfile(); toast('Student logged in (demo)','bg-green-600'); }
+function loginAsParent(student){ currentUserRole='Parent'; currentUserName='Parent of '+(student.name||student.roll); safeGet('loginScreen') && safeGet('loginScreen').classList.add('hidden'); safeGet('adminDashboard') && safeGet('adminDashboard').classList.add('hidden'); safeGet('studentDashboard') && safeGet('studentDashboard').classList.remove('hidden'); safeGet('studentWelcome') && (safeGet('studentWelcome').innerHTML = `<div class="text-lg font-medium">Parent Access • ${escapeHtml(student.name)}</div><div class="text-sm text-gray-600">Roll: ${escapeHtml(student.roll)}</div>`); sessionStorage.setItem('loggedInParent', JSON.stringify({studentRoll: student.roll, studentName: student.name})); renderStudentRequests(); renderStudentProfileForParent(student); toast('Parent logged in','bg-green-600'); }
+
+function logout(){ sessionStorage.removeItem('loggedInTeacher'); sessionStorage.removeItem('loggedInStudent'); sessionStorage.removeItem('loggedInParent'); safeGet('adminDashboard') && safeGet('adminDashboard').classList.add('hidden'); safeGet('teacherDashboard') && safeGet('teacherDashboard').classList.add('hidden'); safeGet('studentDashboard') && safeGet('studentDashboard').classList.add('hidden'); safeGet('loginScreen') && safeGet('loginScreen').classList.remove('hidden'); currentUserRole='Admin'; currentUserName='Admin'; toast('Logged out','bg-green-600'); }
 function logoutTeacher(){ logout(); }
 
-/* Render Dashboard */
-function renderDashboard(){ document.getElementById('totalTeachers').innerText = teachers.length; document.getElementById('totalStudents').innerText = students.length; document.getElementById('totalRequests').innerText = requests.filter(r=>r.status==='Pending').length; document.getElementById('smsCount').innerText = smsLogs.length; }
+/* ---------- Render / Edit ---------- */
+function renderDashboard(){ safeGet('totalTeachers') && (safeGet('totalTeachers').innerText = teachers.length); safeGet('totalStudents') && (safeGet('totalStudents').innerText = students.length); safeGet('totalRequests') && (safeGet('totalRequests').innerText = requests.filter(r=>r.status==='Pending').length); safeGet('smsCount') && (safeGet('smsCount').innerText = smsLogs.length); }
 
-/* Tabs */
-function showTab(tab){ ['dashboard','teacher','student','edit','approve','smslog','attendance'].forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.add('hidden'); }); ['dashboardTab','teacherTab','studentTab','editTab','approveTab','smsTab','attendanceTab'].forEach(id=>{ const el=document.getElementById(id); if(el && el.classList) el.classList.remove('bg-purple-600'); }); if(document.getElementById(tab)) document.getElementById(tab).classList.remove('hidden'); if(document.getElementById(tab+'Tab')) document.getElementById(tab+'Tab').classList.add('bg-purple-600'); if(tab==='attendance') renderAttendanceTable(); renderDashboard(); }
-
-/* Password generation */
-function generatePasswordFromDobAndDept(dobStr, dept){
-  if(!dobStr || !dept) return '';
-  const parts = dobStr.split('-'); if(parts.length !== 3) return '';
-  const dd = parts[2].padStart(2,'0'); const mm = parts[1].padStart(2,'0'); const yyyy = parts[0];
-  return `${dd}${mm}${yyyy}${dept.toUpperCase()}`;
+function showTab(tab){
+  const ids = ['dashboard','teacher','student','edit','approve','smslog','attendance','markAttendance','teacherDashboard','studentDashboard'];
+  ids.forEach(id => { const el = safeGet(id); if(el) el.classList.add('hidden'); });
+  const tabs = ['dashboardTab','teacherTab','studentTab','editTab','approveTab','smsTab','attendanceTab','markAttendanceTab'];
+  tabs.forEach(tid => { const el = safeGet(tid); if(el) el.classList.remove('bg-purple-600'); });
+  const showEl = safeGet(tab); if(showEl) showEl.classList.remove('hidden');
+  const tabBtn = safeGet(tab+'Tab'); if(tabBtn) tabBtn.classList.add('bg-purple-600');
+  if(tab==='attendance') populateAttendanceReportFilters();
+  if(tab==='markAttendance') initMarkAttendanceTabOnShow();
+  renderDashboard();
 }
 
-/* ===== Add Teacher ===== */
-function addTeacher(){
-  const photoData = document.getElementById('teacherPhotoPreview').dataset.base64 || null;
-  const name = document.getElementById('teacherName').value.trim();
-  const gender = document.getElementById('teacherGender').value;
-  const dob = document.getElementById('teacherDOB').value;
-  const mobileRaw = document.getElementById('teacherMobile').value.trim();
-  const email = document.getElementById('teacherEmail').value.trim();
-  const address = document.getElementById('teacherAddress').value.trim();
-  const empID = document.getElementById('teacherEmpID').value.trim();
-  const dept = document.getElementById('teacherDepartment').value;
-  const desig = document.getElementById('teacherDesignation').value.trim();
-  const qual = document.getElementById('teacherQualification').value.trim();
-  const exp = document.getElementById('teacherExperience').value.trim();
-  const subj = document.getElementById('teacherSubjects').value.trim();
-  const doj = document.getElementById('teacherDOJ').value;
-  const isHOD = document.getElementById('teacherHOD').checked;
-  const aadhaar = document.getElementById('teacherAadhaar').value.trim();
-  const pan = document.getElementById('teacherPAN').value.trim();
-  const bank = document.getElementById('teacherBank').value.trim();
-  const emergency = document.getElementById('teacherEmergency').value.trim();
-  let username = document.getElementById('teacherUsername').value.trim();
+/* ---------- Teacher password generator ---------- */
+function generateTeacherGeneratedPassword(fullName, dobStr){
+  if(!fullName || !dobStr) return '';
+  const nameAlpha = fullName.replace(/[^A-Za-z]/g,'').slice(0,4) || fullName.slice(0,4);
+  const parts = dobStr.split('-');
+  if(parts.length !== 3) return (nameAlpha + dobStr);
+  const dd = parts[2].padStart(2,'0');
+  const mm = parts[1].padStart(2,'0');
+  const yyyy = parts[0];
+  return `${nameAlpha}${dd}${mm}${yyyy}`;
+}
+function dobToDDMMYYYY(dobStr){ if(!dobStr) return ''; const p = dobStr.split('-'); if(p.length !==3) return dobStr; return `${p[2].padStart(2,'0')}${p[1].padStart(2,'0')}${p[0]}`; }
+
+/* ---------- PIN helpers ---------- */
+function generate4DigitPin(){ return String(Math.floor(1000 + Math.random() * 9000)); }
+function ensurePinsForAllUsers({teachersToo=false, forStudents=true} = {}) {
+  if (forStudents) students.forEach(s => { if(!s.pin) s.pin = generate4DigitPin(); });
+  if (teachersToo) teachers.forEach(t => { if(!t.pin) t.pin = generate4DigitPin(); });
+  saveToStorage();
+  toast('PINs generated for users', 'bg-green-600');
+}
+function removeAllPins() { students.forEach(s => delete s.pin); teachers.forEach(t => delete t.pin); saveToStorage(); toast('Removed PINs for all users', 'bg-yellow-600'); }
+
+/* ---------- Add Teacher (with extended fields) ---------- */
+async function addTeacher(){
+  const name = (safeGet('teacherName') && safeGet('teacherName').value.trim()) || '';
+  const gender = (safeGet('teacherGender') && safeGet('teacherGender').value) || '';
+  const dob = (safeGet('teacherDOB') && safeGet('teacherDOB').value) || '';
+  const mobileRaw = (safeGet('teacherMobile') && safeGet('teacherMobile').value.trim()) || '';
+  const email = (safeGet('teacherEmail') && safeGet('teacherEmail').value.trim()) || '';
+  const address = (safeGet('teacherAddress') && safeGet('teacherAddress').value.trim()) || '';
+  const empID = (safeGet('teacherEmpID') && safeGet('teacherEmpID').value.trim()) || '';
+  const dept = (safeGet('teacherDepartment') && safeGet('teacherDepartment').value) || '';
+  const designation = (safeGet('teacherDesignation') && safeGet('teacherDesignation').value.trim()) || '';
+  const qualification = (safeGet('teacherQualification') && safeGet('teacherQualification').value.trim()) || '';
+  const contractType = (safeGet('teacherContractType') && safeGet('teacherContractType').value) || '';
+  const employmentStatus = (safeGet('teacherEmploymentStatus') && safeGet('teacherEmploymentStatus').value) || '';
+  const appointmentType = (safeGet('teacherAppointmentType') && safeGet('teacherAppointmentType').value) || '';
+  const grade = (safeGet('teacherGrade') && safeGet('teacherGrade').value.trim()) || '';
+  const salary = (safeGet('teacherSalary') && safeGet('teacherSalary').value) ? parseFloat(safeGet('teacherSalary').value) : null;
+  const probationEnd = (safeGet('teacherProbationEnd') && safeGet('teacherProbationEnd').value) || '';
+  const pfNumber = (safeGet('teacherPF') && safeGet('teacherPF').value.trim()) || '';
+  const esiNumber = (safeGet('teacherESI') && safeGet('teacherESI').value.trim()) || '';
+  const bankName = (safeGet('teacherBankName') && safeGet('teacherBankName').value.trim()) || '';
+  const ifsc = (safeGet('teacherIFSC') && safeGet('teacherIFSC').value.trim()) || '';
+  const accountNumber = (safeGet('teacherAccountNumber') && safeGet('teacherAccountNumber').value.trim()) || '';
+  const taxId = (safeGet('teacherTaxId') && safeGet('teacherTaxId').value.trim()) || '';
+  const aadhaar = (safeGet('teacherAadhaar') && safeGet('teacherAadhaar').value.trim()) || '';
+  const experience = (safeGet('teacherExperience') && safeGet('teacherExperience').value) ? parseInt(safeGet('teacherExperience').value) : null;
+  const joiningDate = (safeGet('teacherJoiningDate') && safeGet('teacherJoiningDate').value) || '';
+  const subjectsRaw = (safeGet('teacherSubjects') && safeGet('teacherSubjects').value.trim()) || '';
+  const subjects = subjectsRaw ? subjectsRaw.split(',').map(s=>s.trim()).filter(Boolean) : [];
+  const emergencyContact = (safeGet('teacherEmergencyContact') && safeGet('teacherEmergencyContact').value.trim()) || '';
+  const isHod = !!(safeGet('teacherIsHod') && safeGet('teacherIsHod').checked);
+  const photoData = (safeGet('teacherPhotoPreview') && safeGet('teacherPhotoPreview').dataset && safeGet('teacherPhotoPreview').dataset.base64) ? safeGet('teacherPhotoPreview').dataset.base64 : null;
+  const resumeData = (safeGet('teacherResume') && safeGet('teacherResume').dataset && safeGet('teacherResume').dataset.base64) ? safeGet('teacherResume').dataset.base64 : null;
+  const prevEmpText = (safeGet('teacherPreviousEmployers') && safeGet('teacherPreviousEmployers').value.trim()) || '';
+  const publicationsText = (safeGet('teacherPublications') && safeGet('teacherPublications').value.trim()) || '';
+  const awards = (safeGet('teacherAwards') && safeGet('teacherAwards').value.trim()) || '';
+  const bio = (safeGet('teacherBio') && safeGet('teacherBio').value.trim()) || '';
+  const linkedin = (safeGet('teacherLinkedIn') && safeGet('teacherLinkedIn').value.trim()) || '';
+  const researchGate = (safeGet('teacherResearchGate') && safeGet('teacherResearchGate').value.trim()) || '';
+  const googleScholar = (safeGet('teacherGoogleScholar') && safeGet('teacherGoogleScholar').value.trim()) || '';
+  const usernameInput = (safeGet('teacherUsername') && safeGet('teacherUsername').value.trim()) || '';
+  const username = usernameInput || normalizeMobile(mobileRaw);
 
   if(!name || !dob || !mobileRaw || !dept || !empID){ toast('Please fill required fields: Name, DOB, Mobile, Department, EmpID','bg-red-600'); return; }
-
-  let mobile = normalizeMobile(mobileRaw);
+  const mobile = normalizeMobile(mobileRaw);
   if(!/^\d{10}$/.test(mobile)){ toast('Enter a valid 10-digit mobile number','bg-red-600'); return; }
-  if(!username) username = mobile;
-  const password = generatePasswordFromDobAndDept(dob, dept);
+  if(teachers.some(t=> (t.empID||'') === empID)){ toast('Employee ID exists','bg-red-600'); return; }
+  if(teachers.some(t=> normalizeMobile(t.username||t.mobile) === mobile)){ toast('Teacher mobile exists','bg-red-600'); return; }
 
-  if(teachers.some(t => (t.empID||'') === empID)){ toast('Employee ID already exists','bg-red-600'); return; }
-  if(teachers.some(t => normalizeMobile(t.username||t.mobile) === mobile)){ toast('Teacher with this mobile already exists','bg-red-600'); return; }
+  const rawPassword = generateTeacherGeneratedPassword(name, dob);
+  const passwordHash = await hashStringSHA256(rawPassword);
 
-  const teacher = { name, gender, dob, mobile, email, address, empID, department:dept, desig, qualification:qual, experience:exp, subjects:subj, doj, isHOD, aadhaar, pan, bank, emergency, username, password, photo: photoData };
-  teachers.push(teacher); saveToStorage(); toast('Teacher added and credentials created','bg-green-600'); clearTeacherForm(); renderDashboard(); renderEdit();
+  // parse previous employers (basic parse: one per line)
+  const previousEmployers = prevEmpText ? prevEmpText.split('\n').map(l=>l.trim()).filter(Boolean) : [];
+
+  const publications = publicationsText ? publicationsText.split('\n').map(l=>l.trim()).filter(Boolean) : [];
+
+  const teacher = {
+    name, gender, dob, mobile, email, address, empID,
+    department:dept, designation, qualification, experience, joiningDate,
+    subjects, emergencyContact, isHod, username, password:passwordHash, photo:photoData, pin: generate4DigitPin(),
+    contractType, employmentStatus, appointmentType, grade, salary, probationEndDate:probationEnd, pfNumber, esiNumber,
+    bankName, ifsc, accountNumber, taxId, aadhaar,
+    previousEmployers, publications, awards, resume:resumeData, bio, linkedin, researchGate, googleScholar,
+    createdAt: new Date().toISOString()
+  };
+
+  teachers.push(teacher); saveToStorage(); renderDashboard(); renderEdit(); toast('Teacher added — password: ' + rawPassword + ' (shown once). PIN: '+teacher.pin, 'bg-green-600');
+  clearTeacherForm(); populateAttendanceReportFilters();
 }
-function clearTeacherForm(){ ['teacherName','teacherGender','teacherDOB','teacherMobile','teacherEmail','teacherAddress','teacherEmpID','teacherDepartment','teacherDesignation','teacherQualification','teacherExperience','teacherSubjects','teacherDOJ','teacherUsername','teacherPassword','teacherAadhaar','teacherPAN','teacherBank','teacherEmergency'].forEach(id=>{ if(document.getElementById(id)) document.getElementById(id).value=''; }); document.getElementById('teacherHOD').checked=false; document.getElementById('teacherPhoto').value=''; const prev=document.getElementById('teacherPhotoPreview'); prev.style.display='none'; prev.src=''; delete prev.dataset.base64; }
 
-/* ===== Add Student ===== */
+/* ---------- Add Student ---------- */
 function addStudent(){
-  const photoData = document.getElementById('studentPhotoPreview').dataset.base64 || null;
-  const admissionYearVal = document.getElementById('studentAdmissionYear').value ? parseInt(document.getElementById('studentAdmissionYear').value) : null;
-  const s = { roll: document.getElementById('studentRoll').value.trim(), name: document.getElementById('studentName').value.trim(), course: document.getElementById('studentCourse').value, branch: document.getElementById('studentBranch').value, admissionYear: admissionYearVal, year: document.getElementById('studentYear').value || '', class: document.getElementById('studentClass').value.trim(), dob: document.getElementById('studentDOB').value, mobile: document.getElementById('studentMobile').value.trim(), email: document.getElementById('studentEmail').value.trim(), address: document.getElementById('studentAddress').value.trim(), photo: photoData };
-  if(!s.roll || !s.name || !s.course || !s.branch){ toast('Please fill Roll, Name, Course & Branch','bg-red-600'); return; }
-  if(s.course === 'BTECH' && (!s.admissionYear || isNaN(s.admissionYear))){ toast('Please enter valid Admission Year for B.Tech','bg-red-600'); return; }
-  if(s.course === 'BTECH' && s.admissionYear){ const acadStart = currentAcademicYearStart(); let yearNum = acadStart - s.admissionYear + 1; if(yearNum < 1) yearNum = 1; if(yearNum > 4) yearNum = 4; s.year = yearNumberToLabel(yearNum); }
-  students.push(s); saveToStorage(); toast('Student added','bg-green-600'); renderDashboard(); renderEdit(); renderAttendanceTable(); clearStudentForm();
+  const roll = (safeGet('studentRoll') && safeGet('studentRoll').value.trim()) || '';
+  const name = (safeGet('studentName') && safeGet('studentName').value.trim()) || '';
+  const course = (safeGet('studentCourse') && safeGet('studentCourse').value) || '';
+  const branch = (safeGet('studentBranch') && safeGet('studentBranch').value) || '';
+  const admissionYearVal = safeGet('studentAdmissionYear') && safeGet('studentAdmissionYear').value ? parseInt(safeGet('studentAdmissionYear').value) : null;
+  const classVal = (safeGet('studentClass') && safeGet('studentClass').value.trim()) || '';
+  const dob = (safeGet('studentDOB') && safeGet('studentDOB').value) || '';
+  const parentPhone = (safeGet('studentParentPhone') && safeGet('studentParentPhone').value.trim()) || '';
+  const photoData = (safeGet('studentPhotoPreview') && safeGet('studentPhotoPreview').dataset && safeGet('studentPhotoPreview').dataset.base64) ? safeGet('studentPhotoPreview').dataset.base64 : null;
+
+  if(!roll || !name || !course || !branch){ toast('Please fill Roll, Name, Course & Branch','bg-red-600'); return; }
+  if(course === 'BTECH' && (!admissionYearVal || isNaN(admissionYearVal))){ toast('Please enter valid Admission Year for B.Tech','bg-red-600'); return; }
+  let yearLabel = (safeGet('studentYear') && safeGet('studentYear').value) || '';
+  if(course === 'BTECH' && admissionYearVal){ const acadStart = currentAcademicYearStart(); let yearNum = acadStart - admissionYearVal + 1; if(yearNum<1) yearNum=1; if(yearNum>4) yearNum=4; yearLabel = yearNumberToLabel(yearNum); }
+  if(students.some(s=> (s.roll||'') === roll)){ toast('Roll number exists','bg-red-600'); return; }
+
+  const s = { roll, name, course, branch, admissionYear:admissionYearVal, year: yearLabel, class: classVal, dob, parentPhone, photo:photoData };
+  s.pin = generate4DigitPin();
+  students.push(s); saveToStorage(); renderDashboard(); renderEdit(); populateAttendanceReportFilters(); renderAttendanceTable(); clearStudentForm(); toast('Student added (student login = roll / DOB DDMMYYYY). PIN: '+s.pin, 'bg-green-600');
 }
-function clearStudentForm(){ ['studentRoll','studentName','studentCourse','studentAdmissionYear','studentYear','studentClass','studentDOB','studentMobile','studentEmail','studentAddress'].forEach(id=>{ if(document.getElementById(id)) document.getElementById(id).value=''; }); document.getElementById('studentBranch').innerHTML='<option value=\"\">Select Branch</option>'; document.getElementById('studentPhoto').value=''; const prev=document.getElementById('studentPhotoPreview'); prev.style.display='none'; prev.src=''; delete prev.dataset.base64; }
 
-/* ===== Remove ===== */
-function removeStudent(i){ if(!confirm('Delete student?')) return; students.splice(i,1); saveToStorage(); renderEdit(); renderDashboard(); renderAttendanceTable(); toast('Student removed','bg-red-600'); }
-function deleteTeacher(i){ if(!confirm('Delete teacher?')) return; teachers.splice(i,1); saveToStorage(); renderEdit(); renderDashboard(); toast('Teacher removed','bg-red-600'); }
+/* ---------- Remove / Delete ---------- */
+async function removeStudent(i){ if(!confirm('Delete student?')) return; students.splice(i,1); saveToStorage(); renderEdit(); renderDashboard(); populateAttendanceReportFilters(); renderAttendanceTable(); toast('Student removed','bg-red-600'); }
+async function deleteTeacher(i){ if(!confirm('Delete teacher?')) return; teachers.splice(i,1); saveToStorage(); renderEdit(); renderDashboard(); toast('Teacher removed','bg-red-600'); }
 
-/* ===== Render Manage / Edit (with Edit + ID + Delete) ===== */
+/* ---------- Render Manage / Edit ---------- */
 function renderEdit(){
-  const container = document.getElementById('editContainer'); container.innerHTML = '';
-  const q = (document.getElementById('globalSearch')?.value || '').toLowerCase().trim();
+  const container = safeGet('editContainer'); if(!container) return;
+  container.innerHTML = '';
+  const q = (safeGet('globalSearch') && safeGet('globalSearch').value || '').toLowerCase().trim();
 
   const tHeader = document.createElement('div'); tHeader.className='font-semibold text-lg'; tHeader.innerText='Teachers'; container.appendChild(tHeader);
   if(teachers.length === 0){ const p = document.createElement('div'); p.innerText='No teachers yet.'; p.className='text-sm text-gray-600'; container.appendChild(p); } else {
@@ -694,14 +1277,15 @@ function renderEdit(){
       row.innerHTML = `<div class="flex items-center gap-3">
                          ${t.photo ? `<img src="${t.photo}" class="thumb">` : `<div class="thumb bg-gray-200 flex items-center justify-center text-xs text-gray-600">No</div>`}
                          <div>
-                           <div class="font-medium">${t.name} <span class="text-sm text-gray-600">(${t.empID||'--'})</span></div>
-                           <div class="text-sm text-gray-600">${t.department || '--'} • ${t.mobile || '--'} ${t.email? '• '+t.email : ''}</div>
-                           <div class="text-sm text-gray-700 mt-1">Username: <strong>${t.username || (t.mobile||'')}</strong> | Password: <strong>${t.password || ''}</strong></div>
+                           <div class="font-medium">${escapeHtml(t.name)} <span class="text-sm text-gray-600">(${escapeHtml(t.empID||'--')})</span></div>
+                           <div class="text-sm text-gray-600">${escapeHtml(t.department || '--')} • ${escapeHtml(t.mobile || '--')} ${t.email? '• '+escapeHtml(t.email) : ''}</div>
+                           <div class="text-xs text-gray-400">Designation: ${escapeHtml(t.designation||'--')} • PIN: ${escapeHtml(t.pin || '-')}</div>
+                           <div class="text-xs text-gray-400">Subjects: ${escapeHtml((t.subjects||[]).join(', ')||'--')}</div>
+                           <div class="text-xs text-gray-400">Status: ${escapeHtml(t.employmentStatus||'--')} • Contract: ${escapeHtml(t.contractType||'--')}</div>
                          </div>
                        </div>
                        <div class="flex gap-2">
                          <button onclick="editTeacher(${i})" class="bg-yellow-500 text-white px-2 py-1 rounded">Edit</button>
-                         <button onclick="downloadTeacherID(${i})" class="bg-blue-500 text-white px-2 py-1 rounded">ID Card</button>
                          <button onclick="deleteTeacher(${i})" class="bg-red-600 text-white px-2 py-1 rounded">Delete</button>
                        </div>`;
       container.appendChild(row);
@@ -716,155 +1300,205 @@ function renderEdit(){
       row.innerHTML = `<div class="flex items-center gap-3">
                          ${s.photo ? `<img src="${s.photo}" class="thumb">` : `<div class="thumb bg-gray-200 flex items-center justify-center text-xs text-gray-600">No</div>`}
                          <div>
-                           <div class="font-medium">${s.name} <span class="text-sm text-gray-600">(${s.roll||'--'})</span></div>
-                           <div class="text-sm text-gray-600">${s.course} • ${s.branch} • Year: ${s.year || '--'} • Class: ${s.class || '--'}</div>
+                           <div class="font-medium">${escapeHtml(s.name)} <span class="text-sm text-gray-600">(${escapeHtml(s.roll||'--')})</span></div>
+                           <div class="text-sm text-gray-600">${escapeHtml(s.course)} • ${escapeHtml(s.branch)} • Year: ${escapeHtml(s.year || '--')} • Class: ${escapeHtml(s.class || '--')}</div>
+                           <div class="text-xs text-gray-400">PIN: ${escapeHtml(s.pin || '-')}</div>
                          </div>
                        </div>
                        <div class="flex gap-2">
-                         <button onclick="editStudent(${i})" class="bg-yellow-500 text-white px-2 py-1 rounded">Edit</button>
-                         <button onclick="downloadStudentID(${i})" class="bg-blue-500 text-white px-2 py-1 rounded">ID Card</button>
-                         <button onclick="downloadStudentJSON(${i})" class="bg-blue-600 text-white px-2 py-1 rounded">Download</button>
-                         <button onclick="removeStudent(${i})" class="bg-red-600 text-white px-2 py-1 rounded">Delete</button>
+                         $1$2
+                         <button onclick="showStudentPin(${i})" class="bg-indigo-600 text-white px-2 py-1 rounded">Show PIN</button>
+                         <button onclick="regenerateStudentPin(${i})" class="bg-purple-600 text-white px-2 py-1 rounded">Regenerate PIN</button>
+                         <button onclick="setStudentPin(${i})" class="bg-yellow-500 text-white px-2 py-1 rounded">Set PIN</button>
+                         $3
                        </div>`;
       container.appendChild(row);
     });
   }
 }
 
-/* ===== Edit Modal handling ===== */
-let editTarget = null; // {type:'teacher'|'student', index}
+/* ---------- Edit modal ---------- */
+let editTarget = null;
 function editTeacher(i){ editTarget = {type:'teacher', index:i}; openEditModalForTeacher(i); }
 function editStudent(i){ editTarget = {type:'student', index:i}; openEditModalForStudent(i); }
 
 function openEditModalForTeacher(i){
-  const t = teachers[i];
-  document.getElementById('editModalTitle').innerText = `Edit Teacher - ${t.name}`;
-  const body = document.getElementById('editModalBody'); body.innerHTML = `
+  const t = teachers[i]; if(!t) return;
+  safeGet('editModalTitle') && (safeGet('editModalTitle').innerText = `Edit Teacher - ${t.name}`);
+  const body = safeGet('editModalBody'); if(!body) return;
+  body.innerHTML = `
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
       <div><label class="text-sm">Full Name</label><input id="edit_name" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.name)}"/></div>
-      <div><label class="text-sm">Mobile</label><input id="edit_mobile" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.mobile)}"/></div>
-      <div><label class="text-sm">Department</label><input id="edit_department" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.department)}"/></div>
-      <div><label class="text-sm">Employee ID</label><input id="edit_empID" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.empID)}"/></div>
-      <div><label class="text-sm">Email</label><input id="edit_email" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.email)}"/></div>
-      <div><label class="text-sm">Designation</label><input id="edit_desig" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.desig)}"/></div>
-      <div class="md:col-span-2"><label class="text-sm">Address</label><input id="edit_address" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.address)}"/></div>
+      <div><label class="text-sm">Gender</label>
+         <select id="edit_gender" class="w-full border rounded px-3 py-2">
+           <option value="">Select</option><option ${t.gender==='Male'?'selected':''}>Male</option><option ${t.gender==='Female'?'selected':''}>Female</option><option ${t.gender==='Other'?'selected':''}>Other</option>
+         </select>
+      </div>
+      <div><label class="text-sm">Mobile</label><input id="edit_mobile" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.mobile||'')}"/></div>
+      <div><label class="text-sm">Employee ID</label><input id="edit_empID" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.empID||'')}"/></div>
+      <div><label class="text-sm">Department</label><input id="edit_department" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.department||'')}"/></div>
+      <div><label class="text-sm">Designation</label><input id="edit_designation" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.designation||'')}"/></div>
+      <div><label class="text-sm">Email</label><input id="edit_email" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.email||'')}"/></div>
+      <div><label class="text-sm">Qualification</label><input id="edit_qualification" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.qualification||'')}"/></div>
+      <div><label class="text-sm">Experience (years)</label><input id="edit_experience" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.experience||'')}"/></div>
+      <div><label class="text-sm">Joining Date</label><input id="edit_joiningDate" type="date" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.joiningDate||'')}"/></div>
+      <div class="md:col-span-2"><label class="text-sm">Address</label><input id="edit_address" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.address||'')}"/></div>
+      <div class="md:col-span-2"><label class="text-sm">Subjects (comma separated)</label><input id="edit_subjects" class="w-full border rounded px-3 py-2" value="${escapeHtml((t.subjects||[]).join(', '))}"/></div>
+
+      <div><label class="text-sm">Contract Type</label><input id="edit_contractType" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.contractType||'')}"/></div>
+      <div><label class="text-sm">Employment Status</label><input id="edit_employmentStatus" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.employmentStatus||'')}"/></div>
+
+      <div><label class="text-sm">Appointment Type</label><input id="edit_appointmentType" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.appointmentType||'')}"/></div>
+      <div><label class="text-sm">Grade</label><input id="edit_grade" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.grade||'')}"/></div>
+
+      <div><label class="text-sm">Salary</label><input id="edit_salary" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.salary||'')}"/></div>
+      <div><label class="text-sm">Probation End</label><input id="edit_probation" type="date" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.probationEndDate||'')}"/></div>
+
+      <div><label class="text-sm">PF Number</label><input id="edit_pf" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.pfNumber||'')}"/></div>
+      <div><label class="text-sm">ESI Number</label><input id="edit_esi" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.esiNumber||'')}"/></div>
+
+      <div><label class="text-sm">Bank Name</label><input id="edit_bankName" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.bankName||'')}"/></div>
+      <div><label class="text-sm">IFSC</label><input id="edit_ifsc" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.ifsc||'')}"/></div>
+      <div><label class="text-sm">Account Number</label><input id="edit_accountNumber" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.accountNumber||'')}"/></div>
+
+      <div><label class="text-sm">Tax ID (PAN)</label><input id="edit_taxId" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.taxId||'')}"/></div>
+      <div><label class="text-sm">Aadhaar</label><input id="edit_aadhaar" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.aadhaar||'')}"/></div>
+
+      <div class="md:col-span-2"><label class="text-sm">Previous Employers (one per line)</label><textarea id="edit_previousEmployers" class="w-full border rounded px-3 py-2" rows="3">${escapeHtml((t.previousEmployers||[]).join('\n'))}</textarea></div>
+      <div class="md:col-span-2"><label class="text-sm">Publications (one per line)</label><textarea id="edit_publications" class="w-full border rounded px-3 py-2" rows="3">${escapeHtml((t.publications||[]).join('\n'))}</textarea></div>
+      <div class="md:col-span-2"><label class="text-sm">Awards</label><input id="edit_awards" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.awards||'')}"/></div>
+
+      <div class="md:col-span-2"><label class="text-sm">Profile / Bio</label><textarea id="edit_bio" class="w-full border rounded px-3 py-2" rows="3">${escapeHtml(t.bio||'')}</textarea></div>
+
+      <div><label class="text-sm">LinkedIn</label><input id="edit_linkedin" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.linkedin||'')}"/></div>
+      <div><label class="text-sm">ResearchGate</label><input id="edit_researchGate" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.researchGate||'')}"/></div>
+      <div><label class="text-sm">Google Scholar</label><input id="edit_googleScholar" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.googleScholar||'')}"/></div>
+
       <div class="md:col-span-2"><label class="text-sm">Photo (upload to replace)</label><input id="edit_photo" type="file" accept="image/*" class="w-full border rounded px-3 py-2"/></div>
+      <div class="md:col-span-2"><label class="text-sm">Resume (upload PDF to replace)</label><input id="edit_resume" type="file" accept="application/pdf" class="w-full border rounded px-3 py-2"/></div>
+
+      <div><label class="text-sm">Emergency Contact</label><input id="edit_emergency" class="w-full border rounded px-3 py-2" value="${escapeHtml(t.emergencyContact||'')}"/></div>
+      <div class="flex items-center gap-3"><input type="checkbox" id="edit_isHod" ${t.isHod? 'checked':''} /> <label for="edit_isHod" class="text-sm">Is HOD</label></div>
     </div>
   `;
-  document.getElementById('editModal').classList.add('active');
-  // wire up photo preview saving to temp dataset when chosen
-  document.getElementById('edit_photo').addEventListener('change', (e)=>{ const f=e.target.files[0]; if(f) fileToBase64(f, data => { document.getElementById('edit_photo').dataset.base64 = data; }); });
+  safeGet('editModal') && safeGet('editModal').classList.add('active');
+  safeGet('edit_photo') && safeGet('edit_photo').addEventListener('change', (e)=>{ const f=e.target.files[0]; if(f) fileToBase64(f,data=>{ safeGet('edit_photo').dataset.base64 = data; }); });
+  safeGet('edit_resume') && safeGet('edit_resume').addEventListener('change', (e)=>{ const f=e.target.files[0]; if(f) fileToBase64(f,data=>{ safeGet('edit_resume').dataset.base64 = data; }); });
 }
 
 function openEditModalForStudent(i){
-  const s = students[i];
-  document.getElementById('editModalTitle').innerText = `Edit Student - ${s.name}`;
-  const body = document.getElementById('editModalBody'); body.innerHTML = `
+  const s = students[i]; if(!s) return;
+  safeGet('editModalTitle') && (safeGet('editModalTitle').innerText = `Edit Student - ${s.name}`);
+  const body = safeGet('editModalBody'); if(!body) return;
+  body.innerHTML = `
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
       <div><label class="text-sm">Full Name</label><input id="edit_name" class="w-full border rounded px-3 py-2" value="${escapeHtml(s.name)}"/></div>
       <div><label class="text-sm">Roll</label><input id="edit_roll" class="w-full border rounded px-3 py-2" value="${escapeHtml(s.roll)}"/></div>
-      <div><label class="text-sm">Course</label><input id="edit_course" class="w-full border rounded px-3 py-2" value="${escapeHtml(s.course)}"/></div>
-      <div><label class="text-sm">Branch</label><input id="edit_branch" class="w-full border rounded px-3 py-2" value="${escapeHtml(s.branch)}"/></div>
-      <div><label class="text-sm">Class</label><input id="edit_class" class="w-full border rounded px-3 py-2" value="${escapeHtml(s.class)}"/></div>
+      <div><label class="text-sm">Course</label><input id="edit_course" class="w-full border rounded px-3 py-2" value="${escapeHtml(s.course||'')}"/></div>
+      <div><label class="text-sm">Branch</label><input id="edit_branch" class="w-full border rounded px-3 py-2" value="${escapeHtml(s.branch||'')}"/></div>
+      <div><label class="text-sm">Class</label><input id="edit_class" class="w-full border rounded px-3 py-2" value="${escapeHtml(s.class||'')}"/></div>
       <div><label class="text-sm">Admission Year</label><input id="edit_admissionYear" class="w-full border rounded px-3 py-2" value="${escapeHtml(s.admissionYear||'')}"/></div>
-      <div class="md:col-span-2"><label class="text-sm">Address</label><input id="edit_address" class="w-full border rounded px-3 py-2" value="${escapeHtml(s.address)}"/></div>
+      <div class="md:col-span-2"><label class="text-sm">Address</label><input id="edit_address" class="w-full border rounded px-3 py-2" value="${escapeHtml(s.address||'')}"/></div>
       <div class="md:col-span-2"><label class="text-sm">Photo (upload to replace)</label><input id="edit_photo" type="file" accept="image/*" class="w-full border rounded px-3 py-2"/></div>
     </div>
   `;
-  document.getElementById('editModal').classList.add('active');
-  document.getElementById('edit_photo').addEventListener('change', (e)=>{ const f=e.target.files[0]; if(f) fileToBase64(f, data => { document.getElementById('edit_photo').dataset.base64 = data; }); });
+  safeGet('editModal') && safeGet('editModal').classList.add('active');
+  safeGet('edit_photo') && safeGet('edit_photo').addEventListener('change', (e)=>{ const f=e.target.files[0]; if(f) fileToBase64(f,data=>{ safeGet('edit_photo').dataset.base64 = data; }); });
 }
 
-function closeEditModal(){ editTarget=null; document.getElementById('editModal').classList.remove('active'); document.getElementById('editModalBody').innerHTML=''; }
+function closeEditModal(){ editTarget=null; safeGet('editModal') && safeGet('editModal').classList.remove('active'); const body=safeGet('editModalBody'); if(body) body.innerHTML=''; }
 
-function saveEdit(){
+async function saveEdit(){
   if(!editTarget) return;
   if(editTarget.type==='teacher'){
     const i = editTarget.index; const t = teachers[i];
-    t.name = document.getElementById('edit_name').value.trim();
-    t.mobile = normalizeMobile(document.getElementById('edit_mobile').value.trim());
-    t.department = document.getElementById('edit_department').value.trim();
-    t.empID = document.getElementById('edit_empID').value.trim();
-    t.email = document.getElementById('edit_email').value.trim();
-    t.desig = document.getElementById('edit_desig').value.trim();
-    t.address = document.getElementById('edit_address').value.trim();
-    const photoBase = document.getElementById('edit_photo').dataset.base64;
+    if(!t) return;
+    t.name = (safeGet('edit_name') && safeGet('edit_name').value.trim()) || t.name;
+    t.gender = (safeGet('edit_gender') && safeGet('edit_gender').value) || t.gender;
+    t.mobile = normalizeMobile((safeGet('edit_mobile') && safeGet('edit_mobile').value.trim()) || t.mobile || '');
+    t.empID = (safeGet('edit_empID') && safeGet('edit_empID').value.trim()) || t.empID || '';
+    t.department = (safeGet('edit_department') && safeGet('edit_department').value.trim()) || t.department || '';
+    t.designation = (safeGet('edit_designation') && safeGet('edit_designation').value.trim()) || t.designation || '';
+    t.email = (safeGet('edit_email') && safeGet('edit_email').value.trim()) || t.email || '';
+    t.qualification = (safeGet('edit_qualification') && safeGet('edit_qualification').value.trim()) || t.qualification || '';
+    const exp = (safeGet('edit_experience') && safeGet('edit_experience').value) || '';
+    t.experience = exp ? parseInt(exp) : t.experience;
+    t.joiningDate = (safeGet('edit_joiningDate') && safeGet('edit_joiningDate').value) || t.joiningDate || '';
+    t.address = (safeGet('edit_address') && safeGet('edit_address').value.trim()) || t.address || '';
+    const subj = (safeGet('edit_subjects') && safeGet('edit_subjects').value.trim()) || '';
+    t.subjects = subj ? subj.split(',').map(s=>s.trim()).filter(Boolean) : [];
+    t.emergencyContact = (safeGet('edit_emergency') && safeGet('edit_emergency').value.trim()) || t.emergencyContact || '';
+    t.isHod = !!(safeGet('edit_isHod') && safeGet('edit_isHod').checked);
+
+    // HR fields
+    t.contractType = (safeGet('edit_contractType') && safeGet('edit_contractType').value.trim()) || t.contractType || '';
+    t.employmentStatus = (safeGet('edit_employmentStatus') && safeGet('edit_employmentStatus').value.trim()) || t.employmentStatus || '';
+    t.appointmentType = (safeGet('edit_appointmentType') && safeGet('edit_appointmentType').value.trim()) || t.appointmentType || '';
+    t.grade = (safeGet('edit_grade') && safeGet('edit_grade').value.trim()) || t.grade || '';
+    const sal = (safeGet('edit_salary') && safeGet('edit_salary').value) || '';
+    t.salary = sal !== '' ? parseFloat(sal) : t.salary;
+    t.probationEndDate = (safeGet('edit_probation') && safeGet('edit_probation').value) || t.probationEndDate || '';
+    t.pfNumber = (safeGet('edit_pf') && safeGet('edit_pf').value.trim()) || t.pfNumber || '';
+    t.esiNumber = (safeGet('edit_esi') && safeGet('edit_esi').value.trim()) || t.esiNumber || '';
+    t.bankName = (safeGet('edit_bankName') && safeGet('edit_bankName').value.trim()) || t.bankName || '';
+    t.ifsc = (safeGet('edit_ifsc') && safeGet('edit_ifsc').value.trim()) || t.ifsc || '';
+    t.accountNumber = (safeGet('edit_accountNumber') && safeGet('edit_accountNumber').value.trim()) || t.accountNumber || '';
+    t.taxId = (safeGet('edit_taxId') && safeGet('edit_taxId').value.trim()) || t.taxId || '';
+    t.aadhaar = (safeGet('edit_aadhaar') && safeGet('edit_aadhaar').value.trim()) || t.aadhaar || '';
+    t.previousEmployers = (safeGet('edit_previousEmployers') && safeGet('edit_previousEmployers').value.trim()) ? safeGet('edit_previousEmployers').value.trim().split('\n').map(l=>l.trim()).filter(Boolean) : t.previousEmployers || [];
+    t.publications = (safeGet('edit_publications') && safeGet('edit_publications').value.trim()) ? safeGet('edit_publications').value.trim().split('\n').map(l=>l.trim()).filter(Boolean) : t.publications || [];
+    t.awards = (safeGet('edit_awards') && safeGet('edit_awards').value.trim()) || t.awards || '';
+    t.bio = (safeGet('edit_bio') && safeGet('edit_bio').value.trim()) || t.bio || '';
+    t.linkedin = (safeGet('edit_linkedin') && safeGet('edit_linkedin').value.trim()) || t.linkedin || '';
+    t.researchGate = (safeGet('edit_researchGate') && safeGet('edit_researchGate').value.trim()) || t.researchGate || '';
+    t.googleScholar = (safeGet('edit_googleScholar') && safeGet('edit_googleScholar').value.trim()) || t.googleScholar || '';
+
+    const photoBase = safeGet('edit_photo') && safeGet('edit_photo').dataset.base64;
     if(photoBase) t.photo = photoBase;
+    const resumeBase = safeGet('edit_resume') && safeGet('edit_resume').dataset.base64;
+    if(resumeBase) t.resume = resumeBase;
+
     teachers[i]=t; saveToStorage(); renderEdit(); renderDashboard(); toast('Teacher updated','bg-green-600'); closeEditModal();
-  } else {
+  } else if(editTarget.type==='student'){
     const i = editTarget.index; const s = students[i];
-    s.name = document.getElementById('edit_name').value.trim();
-    s.roll = document.getElementById('edit_roll').value.trim();
-    s.course = document.getElementById('edit_course').value.trim();
-    s.branch = document.getElementById('edit_branch').value.trim();
-    s.class = document.getElementById('edit_class').value.trim();
-    const ay = document.getElementById('edit_admissionYear').value.trim();
-    s.admissionYear = ay?parseInt(ay):null;
-    s.address = document.getElementById('edit_address').value.trim();
-    const photoBase = document.getElementById('edit_photo').dataset.base64;
+    if(!s) return;
+    s.name = (safeGet('edit_name') && safeGet('edit_name').value.trim()) || s.name;
+    s.roll = (safeGet('edit_roll') && safeGet('edit_roll').value.trim()) || s.roll;
+    s.course = (safeGet('edit_course') && safeGet('edit_course').value.trim()) || s.course;
+    s.branch = (safeGet('edit_branch') && safeGet('edit_branch').value.trim()) || s.branch;
+    s.class = (safeGet('edit_class') && safeGet('edit_class').value.trim()) || s.class;
+    const ay = (safeGet('edit_admissionYear') && safeGet('edit_admissionYear').value.trim()) || '';
+    s.admissionYear = ay ? parseInt(ay) : s.admissionYear;
+    s.address = (safeGet('edit_address') && safeGet('edit_address').value.trim()) || s.address;
+    const photoBase = safeGet('edit_photo') && safeGet('edit_photo').dataset.base64;
     if(photoBase) s.photo = photoBase;
     students[i]=s; saveToStorage(); renderEdit(); renderDashboard(); renderAttendanceTable(); toast('Student updated','bg-green-600'); closeEditModal();
   }
 }
 
-/* ===== ID Card Generation (with QR) ===== */
-async function downloadTeacherID(i){
-  const t = teachers[i];
-  if(!t) return;
-  const html = generateIDCardHTML({type:'Teacher', name:t.name, id:t.empID, dept:t.department, role:t.desig || 'Teacher', mobile:t.mobile, photo:t.photo});
-  await renderAndSaveID(html, `ID_TEACHER_${t.empID || t.mobile}.pdf`);
-}
-async function downloadStudentID(i){
-  const s = students[i];
-  if(!s) return;
-  const html = generateIDCardHTML({type:'Student', name:s.name, id:s.roll, dept:s.branch, role:s.course || 'Student', mobile:s.mobile, photo:s.photo});
-  await renderAndSaveID(html, `ID_STUDENT_${s.roll || i}.pdf`);
-}
-
-function generateIDCardHTML({type, name, id, dept, role, mobile, photo}){
-  const logoSrc = 'mjrcet.jpg';
-  const photoHtml = photo ? `<img src="${photo}" style="width:110px;height:110px;object-fit:cover;border-radius:8px;border:2px solid #eee">` : `<div style="width:110px;height:110px;background:#eee;display:flex;align-items:center;justify-content:center;border-radius:8px;color:#666">No Photo</div>`;
-  const safeName = escapeHtml(name || '');
-  const safeDept = escapeHtml(dept || '');
-  const safeRole = escapeHtml(role || '');
-  const safeId = escapeHtml(id || '');
-  const safeMobile = escapeHtml(mobile || '');
+/* ---------- ID card functions ---------- */
+function generateIDCardHTML({type='Student', name='', id='', dept='', role='', mobile='', photo}) {
+  const photoHtml = photo ? `<img src="${photo}" style="width:90px;height:90px;border-radius:8px;object-fit:cover;" />` : `<div style="width:90px;height:90px;border-radius:8px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;color:#9CA3AF">No Photo</div>`;
   return `
-  <div style="width:540px;height:340px;font-family:Arial,Helvetica,sans-serif;padding:18px;box-sizing:border-box;border-radius:12px;border:6px solid #6D28D9;display:flex;background:#fff;">
-    <div style="flex:1; display:flex; flex-direction:column; justify-content:space-between;">
-      <div style="display:flex;align-items:center;gap:12px">
-        <img src="${logoSrc}" style="width:70px;height:70px;object-fit:contain;border-radius:8px;background:#fff;padding:6px"/>
-        <div>
-          <div style="font-weight:700;color:#4C1D95;font-size:18px">MJR COLLEGE OF ENGINEERING & TECHNOLOGY</div>
-          <div style="font-size:12px;color:#374151;margin-top:4px">Official ID Card - ${type}</div>
+    <div style="width:520px;height:320px;padding:18px;border-radius:12px;box-sizing:border-box;font-family:Arial,sans-serif;background:linear-gradient(90deg,#fff,#f8fafc);">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="flex:1">
+          <div style="font-weight:700;color:#4f46e5;font-size:20px">MJR College of Engineering & Technology</div>
+          <div style="margin-top:10px;font-size:16px"><strong>${escapeHtml(name)}</strong></div>
+          <div style="font-size:13px;color:#6b7280;margin-top:6px">${escapeHtml(role || type)} • ${escapeHtml(dept)}</div>
+          <div style="font-size:13px;color:#6b7280;margin-top:6px">ID: ${escapeHtml(id)} • ${escapeHtml(mobile)}</div>
         </div>
-      </div>
-
-      <div style="display:flex;gap:14px;align-items:center">
-        <div>${photoHtml}</div>
-        <div style="flex:1;">
-          <div style="font-size:20px;font-weight:700;color:#111;margin-bottom:6px">${safeName}</div>
-          <div style="font-size:14px;color:#374151;margin-bottom:6px">${safeRole} • ${safeDept}</div>
-          <div style="font-size:13px;color:#374151">ID: <strong>${safeId}</strong></div>
-          <div style="font-size:13px;color:#374151">Mobile: ${safeMobile}</div>
-        </div>
-        <div id="qrContainer" style="width:120px;height:120px;background:#fff;padding:4px;border-radius:6px;display:flex;align-items:center;justify-content:center"></div>
-      </div>
-
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
-        <div style="font-size:12px;color:#6b7280">Issued by MJRCET</div>
-        <div style="font-size:12px;color:#6b7280">Signature</div>
+        <div style="width:110px;text-align:center">${photoHtml}<div id="qrContainer" style="margin-top:8px;"></div></div>
       </div>
     </div>
-  </div>
   `;
 }
-
 async function renderAndSaveID(htmlString, filename){
-  const tpl = document.getElementById('idCardTemplate');
+  const tpl = safeGet('idCardTemplate');
+  if(!tpl) return;
   tpl.style.display='block'; tpl.innerHTML = htmlString;
   const qrContainer = tpl.querySelector('#qrContainer');
-  if(qrContainer){ qrContainer.innerHTML=''; const q = new QRCode(qrContainer, { text: filename + '|' + new Date().toISOString(), width:110, height:110 }); }
+  if(qrContainer){ qrContainer.innerHTML=''; new QRCode(qrContainer, { text: filename + '|' + new Date().toISOString(), width:110, height:110 }); }
   await new Promise(r=>setTimeout(r,250));
   const canvas = await html2canvas(tpl, { scale:2, useCORS:true, allowTaint:true });
   const imgData = canvas.toDataURL('image/png');
@@ -874,249 +1508,721 @@ async function renderAndSaveID(htmlString, filename){
   tpl.style.display='none'; tpl.innerHTML='';
 }
 
-/* ===== Requests & Approvals (Updated) ===== */
-// Request structure:
-// { id, name, type:'Student'|'Teacher', purpose, status:'Pending'|'Approved by Admin'|'Approved by Teacher'|'Rejected by Admin'|'Rejected by Teacher', approver:'Name', requestedBy:'Student'|'Teacher', timestamp, requesterId }
-
+/* ---------- Requests & approvals ---------- */
 function setRequestFilter(filter){
   currentRequestFilter = filter;
-  document.getElementById('filterAll').classList.remove('bg-gray-200'); document.getElementById('filterStudent').classList.remove('bg-gray-200'); document.getElementById('filterTeacher').classList.remove('bg-gray-200');
-  if(filter==='All') document.getElementById('filterAll').classList.add('bg-gray-200');
-  if(filter==='Student') document.getElementById('filterStudent').classList.add('bg-gray-200');
-  if(filter==='Teacher') document.getElementById('filterTeacher').classList.add('bg-gray-200');
+  ['filterAll','filterStudent','filterTeacher'].forEach(id=>{ const el=safeGet(id); if(el) el.classList.remove('bg-gray-200'); });
+  if(filter==='All') safeGet('filterAll') && safeGet('filterAll').classList.add('bg-gray-200');
+  if(filter==='Student') safeGet('filterStudent') && safeGet('filterStudent').classList.add('bg-gray-200');
+  if(filter==='Teacher') safeGet('filterTeacher') && safeGet('filterTeacher').classList.add('bg-gray-200');
   renderRequests(filter);
 }
+function renderRequests(filterType='All'){ const container = safeGet('requestsContainer'); if(!container) return; container.innerHTML=''; const filtered = requests.filter(r=> filterType==='All' || r.type===filterType); if(filtered.length===0){ container.innerHTML = `<div class="p-3 text-gray-500">No ${filterType !== 'All' ? filterType.toLowerCase() : ''} requests found.</div>`; return; } filtered.forEach(r=>{ const i = requests.indexOf(r); const statusColor = (r.status||'').includes('Approved') ? 'text-green-700' : (r.status||'').includes('Rejected') ? 'text-red-700' : 'text-yellow-700'; const infoLine = r.approver ? `<div class="text-sm text-gray-500">Status: <strong>${escapeHtml(r.status)}</strong> • Handled by: ${escapeHtml(r.approver)}</div>` : `<div class="text-sm text-gray-500">Status: <strong>${escapeHtml(r.status || 'Pending')}</strong></div>`; let actionHtml=''; if((r.status||'Pending') === 'Pending'){ if(currentUserRole==='Admin'){ actionHtml = `<div class="flex gap-2"><button onclick="approveRequest(${i}, 'Admin', 'Admin')" class="bg-green-600 hover:bg-green-700 px-3 py-1 text-white rounded">Approve</button><button onclick="rejectRequest(${i}, 'Admin', 'Admin')" class="bg-red-600 hover:bg-red-700 px-3 py-1 text-white rounded">Reject</button></div>`; } else if(currentUserRole==='Teacher' && r.type==='Student'){ actionHtml = `<div class="flex gap-2"><button onclick="approveRequest(${i}, 'Teacher', currentUserName)" class="bg-green-600 hover:bg-green-700 px-3 py-1 text-white rounded">Approve</button><button onclick="rejectRequest(${i}, 'Teacher', currentUserName)" class="bg-red-600 hover:bg-red-700 px-3 py-1 text-white rounded">Reject</button></div>`; } else { actionHtml = `<div class="text-sm text-gray-500">Pending</div>`; } } else { actionHtml = `<div class="text-sm font-semibold ${statusColor}">${escapeHtml(r.status)}</div>`; } const card = document.createElement('div'); card.className='p-3 border rounded flex justify-between items-start'; card.innerHTML = `<div style="max-width:72%"><div class="font-medium">${escapeHtml(r.name)} <span class="text-sm text-gray-500">(${escapeHtml(r.type)})</span></div><div class="text-sm text-gray-600 mt-1">${escapeHtml(r.purpose||'Leave Request')}</div><div class="text-xs text-gray-400 mt-2">Requested by: ${escapeHtml(r.requestedBy||'')} • ${escapeHtml(r.timestamp||'')}</div><div class="mt-2">${infoLine}</div></div><div class="flex flex-col items-end gap-2">${actionHtml}</div>`; container.appendChild(card); }); }
 
-function renderRequests(filterType = 'All') {
-  const container = document.getElementById('requestsContainer');
-  container.innerHTML = '';
+async function approveRequest(i, approverRole='Admin', approverName=''){ const r = requests[i]; if(!r) return; const who = approverRole==='Teacher' && approverName ? approverName : 'Admin'; r.status = `Approved by ${approverRole}`; r.approver = who; r.approvedAt = new Date().toLocaleString(); saveToStorage(); renderRequests(currentRequestFilter); renderDashboard(); toast(`Request from ${r.name} approved (${who})`,'bg-green-600'); renderTeacherRequests(); renderStudentRequests(); renderTeacherMyRequests(); }
+async function rejectRequest(i, approverRole='Admin', approverName=''){ const r = requests[i]; if(!r) return; const who = approverRole==='Teacher' && approverName ? approverName : 'Admin'; r.status = `Rejected by ${approverRole}`; r.approver = who; r.approvedAt = new Date().toLocaleString(); saveToStorage(); renderRequests(currentRequestFilter); renderDashboard(); toast(`Request from ${r.name} rejected (${who})`,'bg-red-600'); renderTeacherRequests(); renderStudentRequests(); renderTeacherMyRequests(); }
 
-  const filtered = requests.filter(r => filterType === 'All' || r.type === filterType);
+function openStudentRequestModal(){ safeGet('studentRequestReason') && (safeGet('studentRequestReason').value=''); safeGet('studentRequestModal') && safeGet('studentRequestModal').classList.add('active'); }
+function closeStudentRequestModal(){ safeGet('studentRequestModal') && safeGet('studentRequestModal').classList.remove('active'); }
+function openTeacherRequestModal(){ safeGet('teacherRequestReason') && (safeGet('teacherRequestReason').value=''); safeGet('teacherRequestModal') && safeGet('teacherRequestModal').classList.add('active'); }
+function closeTeacherRequestModal(){ safeGet('teacherRequestModal') && safeGet('teacherRequestModal').classList.remove('active'); }
 
-  if (filtered.length === 0) {
-    container.innerHTML = `<div class="p-3 text-gray-500">No ${filterType !== 'All' ? filterType.toLowerCase() : ''} requests found.</div>`;
-    return;
-  }
+async function submitStudentRequest(){ const reason = safeGet('studentRequestReason') && safeGet('studentRequestReason').value.trim(); if(!reason){ toast('Enter reason','bg-red-600'); return; } const s = JSON.parse(sessionStorage.getItem('loggedInStudent') || 'null'); const name = s ? (s.name || s.roll) : (currentUserName || 'Student'); const id = s ? s.roll : ('S' + (students.length+1)); const req = { id: Date.now(), name, type:'Student', purpose:reason, status:'Pending', approver:'', requestedBy:'Student', timestamp:new Date().toLocaleString(), requesterId:id }; requests.push(req); saveToStorage(); closeStudentRequestModal(); renderRequests(currentRequestFilter); renderStudentRequests(); renderDashboard(); toast('Request submitted','bg-green-600'); }
+async function submitTeacherRequest(){ const reason = safeGet('teacherRequestReason') && safeGet('teacherRequestReason').value.trim(); if(!reason){ toast('Enter reason','bg-red-600'); return; } const t = JSON.parse(sessionStorage.getItem('loggedInTeacher') || 'null'); const name = t ? t.name || t.empID : (currentUserName || 'Teacher'); const id = t ? t.empID : ('T' + (teachers.length+1)); const req = { id: Date.now(), name, type:'Teacher', purpose:reason, status:'Pending', approver:'', requestedBy:'Teacher', timestamp:new Date().toLocaleString(), requesterId:id }; requests.push(req); saveToStorage(); closeTeacherRequestModal(); renderRequests(currentRequestFilter); renderTeacherRequests(); renderDashboard(); toast('Request submitted','bg-green-600'); }
 
-  filtered.forEach((r) => {
-    const i = requests.indexOf(r);
-    const statusColor =
-      (r.status || '').includes('Approved') ? 'text-green-700' :
-      (r.status || '').includes('Rejected') ? 'text-red-700' : 'text-yellow-700';
-
-    const infoLine = r.approver
-      ? `<div class="text-sm text-gray-500">Status: <strong>${escapeHtml(r.status)}</strong> • Handled by: ${escapeHtml(r.approver)}</div>`
-      : `<div class="text-sm text-gray-500">Status: <strong>${escapeHtml(r.status || 'Pending')}</strong></div>`;
-
-    // Buttons logic:
-    let actionHtml = '';
-    if ((r.status || 'Pending') === 'Pending') {
-      // If current user is Admin -> show Admin approve buttons
-      if (currentUserRole === 'Admin') {
-        actionHtml = `
-          <div class="flex gap-2">
-            <button onclick="approveRequest(${i}, 'Admin', 'Admin')" class="bg-green-600 hover:bg-green-700 px-3 py-1 text-white rounded">Approve</button>
-            <button onclick="rejectRequest(${i}, 'Admin', 'Admin')" class="bg-red-600 hover:bg-red-700 px-3 py-1 text-white rounded">Reject</button>
-          </div>
-        `;
-      } else if (currentUserRole === 'Teacher' && r.type === 'Student') {
-        // Teachers can approve/reject student leave
-        actionHtml = `
-          <div class="flex gap-2">
-            <button onclick="approveRequest(${i}, 'Teacher', currentUserName)" class="bg-green-600 hover:bg-green-700 px-3 py-1 text-white rounded">Approve</button>
-            <button onclick="rejectRequest(${i}, 'Teacher', currentUserName)" class="bg-red-600 hover:bg-red-700 px-3 py-1 text-white rounded">Reject</button>
-          </div>
-        `;
-      } else {
-        actionHtml = `<div class="text-sm text-gray-500">Pending</div>`;
-      }
-    } else {
-      actionHtml = `<div class="text-sm font-semibold ${statusColor}">${escapeHtml(r.status)}</div>`;
-    }
-
-    const card = document.createElement('div');
-    card.className = 'p-3 border rounded flex justify-between items-start';
-    card.innerHTML = `
-      <div style="max-width:72%">
-        <div class="font-medium">${escapeHtml(r.name)} <span class="text-sm text-gray-500">(${r.type})</span></div>
-        <div class="text-sm text-gray-600 mt-1">${escapeHtml(r.purpose || 'Leave Request')}</div>
-        <div class="text-xs text-gray-400 mt-2">Requested by: ${escapeHtml(r.requestedBy || '')} • ${escapeHtml(r.timestamp || '')}</div>
-        <div class="mt-2">${infoLine}</div>
-      </div>
-      <div class="flex flex-col items-end gap-2">${actionHtml}</div>
-    `;
-    container.appendChild(card);
-  });
-}
-
-/**
- * Approve a request.
- * @param {number} i - index in requests array
- * @param {string} approverRole - 'Admin' or 'Teacher'
- * @param {string} approverName - approver name (teacher/admin)
- */
-function approveRequest(i, approverRole = 'Admin', approverName = '') {
-  const r = requests[i];
-  if (!r) return;
-  const who = approverRole === 'Teacher' && approverName ? approverName : 'Admin';
-  r.status = `Approved by ${approverRole}`;
-  r.approver = who;
-  r.approvedAt = new Date().toLocaleString();
-  saveToStorage();
-  renderRequests(currentRequestFilter);
-  renderDashboard();
-  toast(`Request from ${r.name} approved (${who})`, 'bg-green-600');
-  renderTeacherRequests(); renderStudentRequests(); renderTeacherMyRequests();
-}
-
-function rejectRequest(i, approverRole = 'Admin', approverName = '') {
-  const r = requests[i];
-  if (!r) return;
-  const who = approverRole === 'Teacher' && approverName ? approverName : 'Admin';
-  r.status = `Rejected by ${approverRole}`;
-  r.approver = who;
-  r.approvedAt = new Date().toLocaleString();
-  saveToStorage();
-  renderRequests(currentRequestFilter);
-  renderDashboard();
-  toast(`Request from ${r.name} rejected (${who})`, 'bg-red-600');
-  renderTeacherRequests(); renderStudentRequests(); renderTeacherMyRequests();
-}
-
-/* ===== Request submission (student & teacher) ===== */
-function openStudentRequestModal(){ document.getElementById('studentRequestReason').value=''; document.getElementById('studentRequestModal').classList.add('active'); }
-function closeStudentRequestModal(){ document.getElementById('studentRequestModal').classList.remove('active'); }
-function openTeacherRequestModal(){ document.getElementById('teacherRequestReason').value=''; document.getElementById('teacherRequestModal').classList.add('active'); }
-function closeTeacherRequestModal(){ document.getElementById('teacherRequestModal').classList.remove('active'); }
-
-function submitStudentRequest(){
-  const reason = document.getElementById('studentRequestReason').value.trim();
-  if(!reason){ toast('Enter reason','bg-red-600'); return; }
-  const s = JSON.parse(sessionStorage.getItem('loggedInStudent') || 'null');
-  const name = s ? (s.name || s.roll) : (currentUserName || 'Student');
-  const id = s ? s.roll : ('S' + (students.length+1));
-  const req = { id: Date.now(), name, type:'Student', purpose:reason, status:'Pending', approver:'', requestedBy:'Student', timestamp:new Date().toLocaleString(), requesterId:id };
-  requests.push(req); saveToStorage(); closeStudentRequestModal(); renderRequests(currentRequestFilter); renderStudentRequests(); renderDashboard(); toast('Request submitted','bg-green-600');
-}
-
-function submitTeacherRequest(){
-  const reason = document.getElementById('teacherRequestReason').value.trim();
-  if(!reason){ toast('Enter reason','bg-red-600'); return; }
-  const t = JSON.parse(sessionStorage.getItem('loggedInTeacher') || 'null');
-  const name = t ? (t.name || t.empID) : (currentUserName || 'Teacher');
-  const id = t ? t.empID : ('T' + (teachers.length+1));
-  const req = { id: Date.now(), name, type:'Teacher', purpose:reason, status:'Pending', approver:'', requestedBy:'Teacher', timestamp:new Date().toLocaleString(), requesterId:id };
-  requests.push(req); saveToStorage(); closeTeacherRequestModal(); renderRequests(currentRequestFilter); renderTeacherRequests(); renderDashboard(); toast('Request submitted','bg-green-600');
-}
-
-/* ===== Render teacher-side student requests for approval (when teacher logged in) ===== */
-function renderTeacherRequests(){
-  const container = document.getElementById('teacherRequestsList');
-  if(!container) return;
-  container.innerHTML = '';
-  const pendingStudentRequests = requests.filter(r => r.type === 'Student');
-  if(pendingStudentRequests.length === 0){ container.innerHTML = `<div class="text-sm text-gray-500">No student requests.</div>`; return; }
-  pendingStudentRequests.forEach((r) => {
-    const idx = requests.indexOf(r);
-    const status = r.status || 'Pending';
-    const actions = (status === 'Pending') ? `
-      <div class="flex gap-2">
-        <button onclick="approveRequest(${idx}, 'Teacher', currentUserName)" class="bg-green-600 text-white px-2 py-1 rounded">Approve</button>
-        <button onclick="rejectRequest(${idx}, 'Teacher', currentUserName)" class="bg-red-600 text-white px-2 py-1 rounded">Reject</button>
-      </div>` : `<div class="text-sm ${status.includes('Approved')? 'text-green-700' : 'text-red-700'}">${escapeHtml(status)}</div>`;
-    const card = document.createElement('div');
-    card.className = 'p-2 border rounded flex justify-between items-start';
-    card.innerHTML = `<div>
-                        <div class="font-medium">${escapeHtml(r.name)}</div>
-                        <div class="text-sm text-gray-600">${escapeHtml(r.purpose)}</div>
-                        <div class="text-xs text-gray-400 mt-1">${escapeHtml(r.timestamp)}</div>
-                      </div>
-                      <div>${actions}</div>`;
-    container.appendChild(card);
-  });
-}
-
-/* ===== Render teacher's own requests ===== */
 function renderTeacherMyRequests(){
-  const container = document.getElementById('teacherMyRequestsList');
-  if(!container) return;
-  container.innerHTML = '';
+  const container = safeGet('teacherMyRequestsList'); if(!container) return; container.innerHTML='';
   const t = JSON.parse(sessionStorage.getItem('loggedInTeacher') || 'null');
   const name = t ? t.name : currentUserName;
-  const myReqs = requests.filter(r => r.type === 'Teacher' && r.name === name);
-  if(myReqs.length === 0){ container.innerHTML = `<div class="text-sm text-gray-500">No requests submitted.</div>`; return; }
+  const myReqs = requests.filter(r=> r.type==='Teacher' && r.name===name);
+  if(myReqs.length===0){ container.innerHTML = `<div class="text-sm text-gray-500">No requests submitted.</div>`; return; }
   myReqs.forEach(r=>{
     const card = document.createElement('div');
     card.className='p-2 border rounded';
-    card.innerHTML = `<div class="font-medium">${escapeHtml(r.purpose)}</div>
-                      <div class="text-xs text-gray-400">${escapeHtml(r.timestamp)}</div>
-                      <div class="mt-2 text-sm ${r.status.includes('Approved')? 'text-green-700' : r.status.includes('Rejected')? 'text-red-700':'text-yellow-700'}">${escapeHtml(r.status)}</div>
-                      ${r.approver? `<div class="text-sm text-gray-500">Handled by: ${escapeHtml(r.approver)}</div>` : ''}`;
+    card.innerHTML = `<div class="font-medium">${escapeHtml(r.purpose)}</div><div class="text-xs text-gray-400">${escapeHtml(r.timestamp)}</div><div class="mt-2 text-sm ${r.status.includes('Approved')? 'text-green-700' : r.status.includes('Rejected')? 'text-red-700':'text-yellow-700'}">${escapeHtml(r.status)}</div>${r.approver? `<div class="text-sm text-gray-500">Handled by: ${escapeHtml(r.approver)}</div>` : ''}`;
     container.appendChild(card);
   });
 }
 
-/* ===== Render student's own requests on student dashboard ===== */
 function renderStudentRequests(){
-  const container = document.getElementById('studentRequestsList');
-  if(!container) return;
-  container.innerHTML = '';
+  const container = safeGet('studentRequestsList'); if(!container) return; container.innerHTML='';
   const s = JSON.parse(sessionStorage.getItem('loggedInStudent') || 'null');
   const myRoll = s ? s.roll : null;
-  const myRequests = myRoll ? requests.filter(r => r.type === 'Student' && (r.requesterId == myRoll || r.name === s.name)) : requests.filter(r => r.type === 'Student');
-  if(myRequests.length === 0){ container.innerHTML = `<div class="text-sm text-gray-500">No requests submitted.</div>`; return; }
-  myRequests.forEach(r => {
+  const myRequests = myRoll ? requests.filter(r=> r.type==='Student' && (r.requesterId==myRoll || r.name===s.name)) : requests.filter(r=> r.type==='Student');
+  if(myRequests.length===0){ container.innerHTML = `<div class="text-sm text-gray-500">No requests submitted.</div>`; return; }
+  myRequests.forEach(r=>{
     const status = r.status || 'Pending';
     const approverLine = r.approver ? `<div class="text-sm text-gray-500">Handled by: ${escapeHtml(r.approver)}</div>` : '';
     const card = document.createElement('div');
-    card.className = 'p-2 border rounded';
-    card.innerHTML = `<div class="font-medium">${escapeHtml(r.purpose)}</div>
-                      <div class="text-xs text-gray-400">${escapeHtml(r.timestamp)}</div>
-                      <div class="mt-2 text-sm ${status.includes('Approved')? 'text-green-700' : status.includes('Rejected')? 'text-red-700':'text-yellow-700'}">${escapeHtml(r.status)}</div>
-                      ${approverLine}`;
+    card.className='p-2 border rounded';
+    card.innerHTML = `<div class="font-medium">${escapeHtml(r.purpose)}</div><div class="text-xs text-gray-400">${escapeHtml(r.timestamp)}</div><div class="mt-2 text-sm ${status.includes('Approved')? 'text-green-700' : status.includes('Rejected')? 'text-red-700':'text-yellow-700'}">${escapeHtml(r.status)}</div>${approverLine}`;
     container.appendChild(card);
   });
 }
 
-/* Wrapper to initially render requests UIs */
+function renderSMS(){ const c = safeGet('smsContainer'); if(!c) return; c.innerHTML=''; smsLogs.forEach(s=>{ c.innerHTML += `<div class="p-2 border-b">${escapeHtml(s.time)} → ${escapeHtml(s.to)}: ${escapeHtml(s.msg)}</div>`; }); }
+
+/* ---------- Attendance helpers ---------- */
+function attendanceKey(dateStr, className){ return `${dateStr}::${className||'ALL'}`; }
+function getAttendanceFor(dateStr, className){ return attendanceRecords[attendanceKey(dateStr,className)] || {}; }
+function setAttendanceFor(dateStr, className, obj){ attendanceRecords[attendanceKey(dateStr,className)] = obj; saveToStorage(); }
+
+/* ---------- Populate class select ---------- */
+function populateClassSelectForAttendance(){
+  const sel = safeGet('attendanceClassSelect'); if(!sel) return;
+  const cur = sel.value;
+  const classes = Array.from(new Set(students.map(s=>s.class||'').filter(x=>x))).sort();
+  sel.innerHTML = '<option value="">All</option>';
+  classes.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; sel.appendChild(o); });
+  if(cur) sel.value = cur;
+}
+
+/* ---------- Render mark attendance ---------- */
+function renderMarkAttendance(){
+  const dateEl = safeGet('attendanceDate');
+  const classSel = safeGet('attendanceClassSelect');
+  const container = safeGet('markAttendanceContainer');
+  const msg = safeGet('attendanceMessage');
+  if(!dateEl || !container || !classSel) return;
+  const dateStr = dateEl.value || (new Date()).toISOString().slice(0,10);
+  const cls = classSel.value || '';
+  populateClassSelectForAttendance();
+  const list = students.filter(s => !cls || (s.class === cls));
+  list.sort((a,b)=> (a.roll||'').localeCompare(b.roll||''));
+  const saved = getAttendanceFor(dateStr, cls);
+  let html = `<div class="w-full"><table class="w-full text-sm"><thead class="bg-gray-100"><tr>
+                <th class="border px-3 py-2 text-left">Roll</th>
+                <th class="border px-3 py-2 text-left">Name</th>
+                <th class="border px-3 py-2 text-center">Present</th>
+                <th class="border px-3 py-2">Notes</th>
+              </tr></thead><tbody>`;
+  if(list.length===0){ html += `<tr><td class="border px-3 py-2" colspan="4">No students for selected class/date.</td></tr>`; }
+  else {
+    list.forEach(s=>{ const r = s.roll || ''; const present = saved[r] ? !!saved[r].present : false; const note = saved[r] && saved[r].note ? escapeHtml(saved[r].note) : ''; html += `<tr>
+                 <td class="border px-3 py-2">${escapeHtml(String(s.roll||''))}</td>
+                 <td class="border px-3 py-2">${escapeHtml(s.name||'')}</td>
+                 <td class="border px-3 py-2 text-center"><input type="checkbox" data-roll="${escapeHtml(String(s.roll||''))}" ${present ? 'checked' : ''} /></td>
+                 <td class="border px-3 py-2"><input type="text" class="w-full border rounded px-2 py-1" data-note="${escapeHtml(String(s.roll||''))}" value="${note}"/></td>
+               </tr>`; });
+  }
+  html += `</tbody></table></div>`;
+  container.innerHTML = html;
+  if(msg) msg.innerText = `Editing attendance for ${dateStr}${cls ? ' • Class: '+cls : ''}`;
+}
+
+/* ---------- Save attendance ---------- */
+async function saveMarkedAttendance(){
+  const dateEl = safeGet('attendanceDate');
+  const classSel = safeGet('attendanceClassSelect');
+  if(!dateEl) return toast('Select date','bg-red-600');
+  const dateStr = dateEl.value || (new Date()).toISOString().slice(0,10);
+  const cls = classSel ? classSel.value : '';
+  const rows = Array.from(document.querySelectorAll('#markAttendanceContainer tbody tr'));
+  const record = {}; const markerName = currentUserName || 'Unknown'; const markerRole = currentUserRole || 'Admin';
+  rows.forEach(row=>{ const chk = row.querySelector('input[type="checkbox"]'); const r = chk ? chk.dataset.roll : null; if(r===null) return; const noteInput = row.querySelector(`input[data-note="${r}"]`); const note = noteInput ? noteInput.value.trim() : ''; record[r] = { present: !!(chk && chk.checked), markedAt: new Date().toLocaleString(), note, markedBy: markerName, markerRole }; });
+  setAttendanceFor(dateStr, cls, record);
+  toast(`Attendance saved by ${markerName} (${markerRole})`,'bg-green-600');
+}
+
+/* ---------- Mark all / auto-fill ---------- */
+function markAll(present=true){ const checks = Array.from(document.querySelectorAll('#markAttendanceContainer input[type="checkbox"]')); checks.forEach(c => c.checked = present); }
+function autoFillFromLast(){ const dateEl = safeGet('attendanceDate'); const classSel = safeGet('attendanceClassSelect'); if(!dateEl) return; const dateStr = dateEl.value || (new Date()).toISOString().slice(0,10); const cls = classSel ? classSel.value : ''; const prefix = `::${cls || 'ALL'}`; const keys = Object.keys(attendanceRecords).filter(k => k.endsWith(prefix)).sort().reverse(); const prior = keys.find(k => !k.startsWith(dateStr)); if(!prior){ toast('No previous attendance for this class found','bg-yellow-600'); return; } const prevRecord = attendanceRecords[prior] || {}; const checks = Array.from(document.querySelectorAll('#markAttendanceContainer tbody tr')); checks.forEach(row=>{ const chk = row.querySelector('input[type="checkbox"]'); const r = chk ? chk.dataset.roll : null; if(r===null) return; chk.checked = !!(prevRecord[r] && prevRecord[r].present); const noteInput = row.querySelector(`input[data-note="${r}"]`); if(noteInput) noteInput.value = (prevRecord[r] && prevRecord[r].note) ? prevRecord[r].note : ''; }); toast('Auto-filled from last saved date','bg-green-600'); }
+
+/* ---------- Download attendance and student JSON ---------- */
+function downloadMarkedAttendance(){ const dateEl = safeGet('attendanceDate'); const classSel = safeGet('attendanceClassSelect'); if(!dateEl) return toast('Select date','bg-red-600'); const dateStr = dateEl.value || (new Date()).toISOString().slice(0,10); const cls = classSel ? classSel.value : ''; const rec = getAttendanceFor(dateStr, cls); const blob = new Blob([JSON.stringify({date:dateStr, class:cls, record:rec},null,2)], {type:'application/json'}); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `attendance_${dateStr}${cls?('_'+cls.replace(/\s+/g,'_')):''}.json`; link.click(); URL.revokeObjectURL(link.href); toast('Attendance exported','bg-green-600'); }
+function downloadStudentJSON(i){ const s = students[i]; if(!s) return; const blob = new Blob([JSON.stringify(s,null,2)], {type:'application/json'}); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `student_${s.roll || i}.json`; link.click(); URL.revokeObjectURL(link.href); toast('Downloaded student JSON','bg-green-600'); }
+
+/* ---------- Recompute years ---------- */
+function recomputeAllBtechYears(){ const acadStart = currentAcademicYearStart(); students.forEach(s=>{ if(s.course==='BTECH' && s.admissionYear){ let yearNum = acadStart - s.admissionYear + 1; if(yearNum<1) yearNum=1; if(yearNum>4) yearNum=4; s.year = yearNumberToLabel(yearNum); } }); saveToStorage(); }
+
+/* ---------- Branch / year helpers ---------- */
+function updateBranchOptions(){ const course = (safeGet('studentCourse') && safeGet('studentCourse').value) || ''; const bSel = safeGet('studentBranch'); if(!bSel) return; bSel.innerHTML = '<option value="">Select Branch</option>'; if(branchLists[course]) branchLists[course].forEach(br=>{ const o=document.createElement('option'); o.value=br; o.textContent=br; bSel.appendChild(o); }); computeAndSetYear(); }
+function computeAndSetYear(){ const course = (safeGet('studentCourse') && safeGet('studentCourse').value) || ''; const admissionYearStr = (safeGet('studentAdmissionYear') && safeGet('studentAdmissionYear').value) || ''; const yearSelect = safeGet('studentYear'); const yearNote = safeGet('yearNote'); if(course==='BTECH' && admissionYearStr){ const admissionYear = parseInt(admissionYearStr); if(isNaN(admissionYear)){ if(yearSelect) yearSelect.value=''; if(yearNote) yearNote.innerText='Invalid admission year'; return; } const acadStart = currentAcademicYearStart(); let yearNum = acadStart - admissionYear + 1; if(yearNum<1) yearNum=1; if(yearNum>4) yearNum=4; if(yearSelect) { yearSelect.value = yearNumberToLabel(yearNum); yearSelect.disabled = true; } if(yearNote) yearNote.innerText = `Auto-calculated for B.Tech (Admission ${admissionYear}) — current academic start ${acadStart}`; } else { if(yearSelect) yearSelect.disabled = false; if(yearNote) yearNote.innerText='Select year manually for MBA/Diploma (B.Tech auto-calculated).'; } }
+
+/* ---------- CSV export ---------- */
+function arrayToCSV(rows, headers){
+  const lines = [];
+  lines.push(headers.map(h=> `"${String(h).replaceAll('"','""')}"`).join(','));
+  rows.forEach(r => {
+    const line = headers.map(h => {
+      const v = r[h] === undefined || r[h] === null ? '' : String(r[h]);
+      return `"${v.replaceAll('"','""')}"`;
+    }).join(',');
+    lines.push(line);
+  });
+  return lines.join('\n');
+}
+
+/* ---------- Download combined CSV ---------- */
+function downloadTeachersAndStudentsCSV(){
+  const teacherHeaders = ['name','empID','department','mobile','email','qualification','pin'];
+  const studentHeaders = ['roll','name','course','branch','year','class','mobile','email','parentPhone','pin'];
+
+  const tRows = teachers.map(t => ({ name: t.name||'', empID: t.empID||'', department: t.department||'', mobile: t.mobile||'', email: t.email||'', qualification: t.qualification||'', pin: t.pin||'' }));
+  const sRows = students.map(s => ({ roll: s.roll||'', name: s.name||'', course: s.course||'', branch: s.branch||'', year: s.year||'', class: s.class||'', mobile: s.mobile||'', email: s.email||'', parentPhone: s.parentPhone||'', pin: s.pin||'' }));
+
+  const tCsv = arrayToCSV(tRows, teacherHeaders);
+  const sCsv = arrayToCSV(sRows, studentHeaders);
+
+  // Provide combined zip-like single file by concatenating with separators
+  const combined = `--- TEACHERS ---\n${tCsv}\n\n--- STUDENTS ---\n${sCsv}\n`;
+  const blob = new Blob([combined], {type:'text/csv'});
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `mjrcet_export_${new Date().toISOString().slice(0,10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+  toast('CSV exported','bg-green-600');
+}
+
+/* ---------- Initial requests render ---------- */
 function renderRequestsInitial(){
   renderRequests(currentRequestFilter);
   renderTeacherRequests();
-  renderTeacherMyRequests();
   renderStudentRequests();
 }
 
-/* ===== SMS ===== */
-function sendSMS(to,msg){ smsLogs.push({id:smsLogs.length+1,to,msg,time:new Date().toLocaleString()}); saveToStorage(); renderDashboard(); renderSMS(); }
-function renderSMS(){ const c=document.getElementById('smsContainer'); c.innerHTML=''; smsLogs.forEach(s=>{c.innerHTML+=`<div class="p-2 border-b">${s.time} → ${s.to}: ${s.msg}</div>`}); }
+/* ---------- Attendance report filters population ---------- */
+function populateAttendanceReportFilters(){
+  const courseSel = safeGet('reportCourse');
+  const branchSel = safeGet('reportBranch');
+  const classSel = safeGet('reportClass');
+  if(!courseSel || !branchSel || !classSel) return;
 
-/* ===== Attendance ===== */
-function renderAttendanceTable(){
-  const tbody=document.getElementById('attendanceTable'); const cls=document.getElementById('attendanceClass').value; tbody.innerHTML='';
-  students.filter(s=>!cls || s.class===cls).forEach(s=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td class="border px-3 py-2">${s.roll}</td><td class="border px-3 py-2">${s.name}</td><td class="border px-3 py-2 text-center"><input type="checkbox" data-roll="${s.roll}"/></td>`; tbody.appendChild(tr); });
+  const courses = Array.from(new Set(students.map(s => s.course||'').filter(x=>x))).sort();
+  courseSel.innerHTML = '<option value="">All</option>';
+  courses.forEach(c => { const o=document.createElement('option'); o.value=c; o.textContent=c; courseSel.appendChild(o); });
+
+  const branches = Array.from(new Set(students.map(s => s.branch||'').filter(x=>x))).sort();
+  branchSel.innerHTML = '<option value="">All</option>';
+  branches.forEach(b => { const o=document.createElement('option'); o.value=b; o.textContent=b; branchSel.appendChild(o); });
+
+  const classes = Array.from(new Set(students.map(s => s.class||'').filter(x=>x))).sort();
+  classSel.innerHTML = '<option value="">All</option>';
+  classes.forEach(c => { const o=document.createElement('option'); o.value=c; o.textContent=c; classSel.appendChild(o); });
 }
-function downloadAttendanceReport(){ const rows=Array.from(document.querySelectorAll('#attendanceTable tr')); const report=rows.map(row=>{ const roll=row.cells[0].textContent; const name=row.cells[1].textContent; const present=row.querySelector('input').checked?'Present':'Absent'; return {roll,name,present}; }); const blob=new Blob([JSON.stringify(report,null,2)],{type:'application/json'}); const link=document.createElement('a'); link.href=URL.createObjectURL(blob); link.download=`attendance_${new Date().toISOString().slice(0,10)}.json`; link.click(); URL.revokeObjectURL(link.href); toast('Attendance report downloaded','bg-green-600'); }
 
-function exportAllData(){ const data={teachers,students,requests,smsLogs}; const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const link=document.createElement('a'); link.href=URL.createObjectURL(blob); link.download='MJRCET_data.json'; link.click(); URL.revokeObjectURL(link.href); toast('All data downloaded','bg-green-600'); }
-function downloadStudentJSON(i){ const blob=new Blob([JSON.stringify(students[i],null,2)],{type:'application/json'}); const link=document.createElement('a'); link.href=URL.createObjectURL(blob); link.download=`student_${students[i].roll||i}.json`; link.click(); URL.revokeObjectURL(link.href); toast('Student downloaded','bg-green-600'); }
+function onReportCourseChange(){
+  const course = (safeGet('reportCourse') && safeGet('reportCourse').value) || '';
+  const branchSel = safeGet('reportBranch');
+  if(!branchSel) return;
+  branchSel.innerHTML = '<option value="">All</option>';
+  const filtered = students.filter(s => !course || s.course === course).map(s=>s.branch).filter(b=>b).map(b=>b);
+  Array.from(new Set(filtered)).sort().forEach(b => { const o=document.createElement('option'); o.value=b; o.textContent=b; branchSel.appendChild(o); });
+  onReportFilterChange();
+}
 
-/* ===== Recompute years on load ===== */
-function recomputeAllBtechYears(){ const acadStart = currentAcademicYearStart(); students.forEach(s=>{ if(s.course === 'BTECH' && s.admissionYear){ let yearNum = acadStart - s.admissionYear + 1; if(yearNum < 1) yearNum = 1; if(yearNum > 4) yearNum = 4; s.year = yearNumberToLabel(yearNum); } }); saveToStorage(); }
+function onReportFilterChange(){ /* placeholder for future */ }
 
-/* ===== Utility: escape HTML to avoid injection in modal values ===== */
-function escapeHtml(str){ if(!str) return ''; return String(str).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;'); }
+/* ---------- Generate attendance report (table) ---------- */
+function generateAttendanceReport(){
+  const from = safeGet('reportFrom') && safeGet('reportFrom').value;
+  const to = safeGet('reportTo') && safeGet('reportTo').value;
+  const course = safeGet('reportCourse') && safeGet('reportCourse').value;
+  const branch = safeGet('reportBranch') && safeGet('reportBranch').value;
+  const cls = safeGet('reportClass') && safeGet('reportClass').value;
 
-/* ===== Branch/Year helpers (student form) ===== */
-function updateBranchOptions(){ const course = document.getElementById('studentCourse').value; const bSel = document.getElementById('studentBranch'); bSel.innerHTML = '<option value=\"\">Select Branch</option>'; if(branchLists[course]) branchLists[course].forEach(br => { const o=document.createElement('option'); o.value=br; o.textContent=br; bSel.appendChild(o); }); computeAndSetYear(); }
-function computeAndSetYear(){ const course=document.getElementById('studentCourse').value; const admissionYearStr=document.getElementById('studentAdmissionYear').value; const yearSelect=document.getElementById('studentYear'); const yearNote=document.getElementById('yearNote'); if(course==='BTECH' && admissionYearStr){ const admissionYear=parseInt(admissionYearStr); if(isNaN(admissionYear)){ yearSelect.value=''; yearNote.innerText='Invalid admission year'; return; } const acadStart=currentAcademicYearStart(); let yearNum=acadStart - admissionYear + 1; if(yearNum<1) yearNum=1; if(yearNum>4) yearNum=4; yearSelect.value=yearNumberToLabel(yearNum); yearSelect.disabled=true; yearNote.innerText=`Auto-calculated for B.Tech (Admission ${admissionYear}) — current academic start ${acadStart}`; } else { yearSelect.disabled=false; yearNote.innerText='Select year manually for MBA/Diploma (B.Tech auto-calculated).'; } }
+  const container = safeGet('attendanceReportContainer');
+  if(!container) return;
 
-/* ===== Initialize UI on load ===== */
-window.addEventListener('load', ()=>{
-  if(loadFromStorage()){ recomputeAllBtechYears(); }
-  renderDashboard(); renderEdit(); renderSMS(); renderRequestsInitial(); renderAttendanceTable();
-  loginScreen.classList.remove('hidden');
-  computeAndSetYear();
-});
+  const fromDate = from ? new Date(from) : null;
+  const toDate = to ? new Date(to) : null;
+
+  let list = students.slice();
+  if(course) list = list.filter(s=> s.course === course);
+  if(branch) list = list.filter(s=> s.branch === branch);
+  if(cls) list = list.filter(s=> s.class === cls);
+
+  if(list.length === 0){ container.innerHTML = '<div class="text-sm text-gray-500">No students for selected filters.</div>'; return; }
+
+  const datesSet = new Set();
+  Object.keys(attendanceRecords).forEach(k => {
+    const parts = k.split('::');
+    if(parts.length>=1){
+      const d = parts[0];
+      if(!fromDate && !toDate) datesSet.add(d);
+      else {
+        const dt = new Date(d);
+        if( (fromDate ? dt >= fromDate : true) && (toDate ? dt <= toDate : true) ) datesSet.add(d);
+      }
+    }
+  });
+  const dates = Array.from(datesSet).sort();
+
+  let html = `<div class="overflow-auto"><table class="w-full text-sm"><thead class="bg-gray-100"><tr><th class="border px-2 py-2 text-left">Roll</th><th class="border px-2 py-2 text-left">Student</th>`;
+  dates.forEach(d => html += `<th class="border px-2 py-2 text-center">${escapeHtml(d)}</th>`);
+  html += `</tr></thead><tbody>`;
+
+  list.forEach(s => {
+    html += `<tr><td class="border px-2 py-1">${escapeHtml(s.roll)}</td><td class="border px-2 py-1">${escapeHtml(s.name)}</td>`;
+    dates.forEach(d => {
+      const recAll = attendanceRecords[`${d}::${s.class || 'ALL'}`] || attendanceRecords[`${d}::ALL`] || {};
+      const r = recAll[s.roll] || null;
+      const mark = r ? (r.present ? 'P' : 'A') : '-';
+      html += `<td class="border px-2 py-1 text-center">${escapeHtml(mark)}</td>`;
+    });
+    html += `</tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+  container.innerHTML = html;
+}
+
+function downloadAttendanceReportCSV(){
+  const course = safeGet('reportCourse') && safeGet('reportCourse').value;
+  const branch = safeGet('reportBranch') && safeGet('reportBranch').value;
+  const cls = safeGet('reportClass') && safeGet('reportClass').value;
+  const datesSet = new Set();
+  Object.keys(attendanceRecords).forEach(k => {
+    const parts = k.split('::');
+    const d = parts[0];
+    datesSet.add(d);
+  });
+  const dates = Array.from(datesSet).sort();
+  const header = ['roll','name'].concat(dates);
+  let rows = [];
+  let list = students.slice();
+  if(course) list = list.filter(s=> s.course === course);
+  if(branch) list = list.filter(s=> s.branch === branch);
+  if(cls) list = list.filter(s=> s.class === cls);
+  list.forEach(s => {
+    const row = { roll: s.roll||'', name: s.name||'' };
+    dates.forEach(d => {
+      const recAll = attendanceRecords[`${d}::${s.class || 'ALL'}`] || attendanceRecords[`${d}::ALL`] || {};
+      const r = recAll[s.roll] || null;
+      row[d] = r ? (r.present ? 'P' : 'A') : '-';
+    });
+    rows.push(row);
+  });
+  if(rows.length === 0){ toast('No attendance rows to export','bg-yellow-600'); return; }
+  const csv = arrayToCSV(rows, header);
+  const blob = new Blob([csv], {type:'text/csv'});
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `attendance_report_${new Date().toISOString().slice(0,10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+  toast('Attendance CSV downloaded','bg-green-600');
+}
+
+function clearAttendanceReportFilters(){
+  safeGet('reportCourse') && (safeGet('reportCourse').value = '');
+  safeGet('reportBranch') && (safeGet('reportBranch').value = '');
+  safeGet('reportClass') && (safeGet('reportClass').value = '');
+  safeGet('reportFrom') && (safeGet('reportFrom').value = '');
+  safeGet('reportTo') && (safeGet('reportTo').value = '');
+  populateAttendanceReportFilters();
+  safeGet('attendanceReportContainer') && (safeGet('attendanceReportContainer').innerHTML = '');
+}
+
+/* ---------- Mark Attendance tab initialization ---------- */
+function initMarkAttendanceTabOnShow(){
+  const dateEl = safeGet('attendanceDate');
+  if(dateEl && !dateEl.value) dateEl.value = (new Date()).toISOString().slice(0,10);
+  populateClassSelectForAttendance();
+  renderMarkAttendance();
+}
+
+/* ---------- Student profile renders ---------- */
+function renderStudentProfile(){
+  const s = JSON.parse(sessionStorage.getItem('loggedInStudent') || 'null');
+  const info = safeGet('studentProfileInfo');
+  if(!info) return;
+  if(!s) { info.innerHTML = '<div class="text-sm text-gray-500">Not logged in</div>'; return; }
+  info.innerHTML = `<div class="font-medium">${escapeHtml(s.name)} • ${escapeHtml(s.roll)}</div>
+                    <div class="text-sm text-gray-600">Course: ${escapeHtml(s.course||'')} • ${escapeHtml(s.branch||'')}</div>
+                    <div class="text-sm text-gray-600">Year: ${escapeHtml(s.year||'')} • Class: ${escapeHtml(s.class||'')}</div>
+                    <div class="text-sm text-gray-600">Parent phone: ${escapeHtml(s.parentPhone||'')}</div>`;
+}
+
+function renderStudentProfileForParent(student){
+  const info = safeGet('studentProfileInfo');
+  if(!info) return;
+  const s = student;
+  info.innerHTML = `<div class="font-medium">${escapeHtml(s.name)} • ${escapeHtml(s.roll)}</div>
+                    <div class="text-sm text-gray-600">Course: ${escapeHtml(s.course||'')} • ${escapeHtml(s.branch||'')}</div>
+                    <div class="text-sm text-gray-600">Year: ${escapeHtml(s.year||'')} • Class: ${escapeHtml(s.class||'')}</div>
+                    <div class="text-sm text-gray-600">Parent phone: ${escapeHtml(s.parentPhone||'')}</div>`;
+}
+
+/* ---------- Admin password modal helpers ---------- */
+function openAdminChangePasswordModal(){ safeGet('newAdminPassword') && (safeGet('newAdminPassword').value = ''); safeGet('adminPasswordModal') && safeGet('adminPasswordModal').classList.add('active'); }
+function closeAdminChangePasswordModal(){ safeGet('adminPasswordModal') && safeGet('adminPasswordModal').classList.remove('active'); }
+
+function changeAdminPasswordFromModal(){
+  const npEl = safeGet('newAdminPassword');
+  const np = npEl ? npEl.value.trim() : '';
+  if(!np){ toast('Enter new password','bg-red-600'); return; }
+  setStoredAdminPassword(np);
+  saveToStorage();
+  closeAdminChangePasswordModal();
+  toast('Admin password updated (fallback 12345677 still works)','bg-green-600');
+}
+
+
+async function addStudent(){
+  // Basic / required
+  const roll = (safeGet('studentRoll') && safeGet('studentRoll').value.trim()) || '';
+  const name = (safeGet('studentName') && safeGet('studentName').value.trim()) || '';
+  const course = (safeGet('studentCourse') && safeGet('studentCourse').value) || '';
+  const branch = (safeGet('studentBranch') && safeGet('studentBranch').value) || '';
+  const admissionYearVal = safeGet('studentAdmissionYear') && safeGet('studentAdmissionYear').value ? parseInt(safeGet('studentAdmissionYear').value) : null;
+  const classVal = (safeGet('studentClass') && safeGet('studentClass').value.trim()) || '';
+  const dob = (safeGet('studentDOB') && safeGet('studentDOB').value) || '';
+  const parentPhone = (safeGet('studentParentPhone') && safeGet('studentParentPhone').value.trim()) || '';
+  const emergencyContact = (safeGet('studentEmergencyContact') && safeGet('studentEmergencyContact').value.trim()) || '';
+  const address = (safeGet('studentAddress') && safeGet('studentAddress').value.trim()) || '';
+
+  // Identity & contact
+  const studentMobile = (safeGet('studentMobile') && safeGet('studentMobile').value.trim()) || '';
+  const studentEmail = (safeGet('studentEmail') && safeGet('studentEmail').value.trim()) || '';
+  const gender = (safeGet('studentGender') && safeGet('studentGender').value) || '';
+  const aadhaar = (safeGet('studentAadhaar') && safeGet('studentAadhaar').value.trim()) || '';
+
+  // extras
+  const bloodGroup = (safeGet('studentBloodGroup') && safeGet('studentBloodGroup').value.trim()) || '';
+  const hostelStatus = (safeGet('studentHostelStatus') && safeGet('studentHostelStatus').value) || '';
+  const category = (safeGet('studentCategory') && safeGet('studentCategory').value) || '';
+  const transport = (safeGet('studentTransport') && safeGet('studentTransport').value.trim()) || '';
+  const guardianName = (safeGet('studentGuardianName') && safeGet('studentGuardianName').value.trim()) || '';
+  const admissionNo = (safeGet('studentAdmissionNo') && safeGet('studentAdmissionNo').value.trim()) || '';
+  const medicalInfo = (safeGet('studentMedicalInfo') && safeGet('studentMedicalInfo').value.trim()) || '';
+
+  // Academic records: tenth
+  const tenthBoard = (safeGet('tenthBoard') && safeGet('tenthBoard').value.trim()) || '';
+  const tenthYear = safeGet('tenthYear') && safeGet('tenthYear').value ? parseInt(safeGet('tenthYear').value) : null;
+  const tenthPercentage = safeGet('tenthPercentage') && safeGet('tenthPercentage').value ? parseFloat(safeGet('tenthPercentage').value) : null;
+  const tenthFileInput = safeGet('tenthMarksheet');
+
+  // Inter
+  const interBoard = (safeGet('interBoard') && safeGet('interBoard').value.trim()) || '';
+  const interYear = safeGet('interYear') && safeGet('interYear').value ? parseInt(safeGet('interYear').value) : null;
+  const interPercentage = safeGet('interPercentage') && safeGet('interPercentage').value ? parseFloat(safeGet('interPercentage').value) : null;
+  const interFileInput = safeGet('interMarksheet');
+
+  // Grad
+  const gradDegree = (safeGet('gradDegree') && safeGet('gradDegree').value.trim()) || '';
+  const gradYear = safeGet('gradYear') && safeGet('gradYear').value ? parseInt(safeGet('gradYear').value) : null;
+  const gradPercentage = safeGet('gradPercentage') && safeGet('gradPercentage').value ? parseFloat(safeGet('gradPercentage').value) : null;
+  const gradFileInput = safeGet('gradMarksheet');
+
+  // Certificates multiple
+  const certInput = safeGet('studentCertificates');
+
+  // photo
+  const photoData = (safeGet('studentPhotoPreview') && safeGet('studentPhotoPreview').dataset && safeGet('studentPhotoPreview').dataset.base64) ? safeGet('studentPhotoPreview').dataset.base64 : null;
+
+  // Validate basics
+  if(!roll || !name || !course || !branch){ toast('Please fill Roll, Name, Course & Branch','bg-red-600'); return; }
+  if(course === 'BTECH' && (!admissionYearVal || isNaN(admissionYearVal))){ toast('Please enter valid Admission Year for B.Tech','bg-red-600'); return; }
+  if(aadhaar && !/^\d{12}$/.test(aadhaar)){ toast('Aadhaar should be 12 digits','bg-red-600'); return; }
+
+  // duplicate check
+  if(students.some(s=> (s.roll||'') === roll)){ toast('Roll number exists','bg-red-600'); return; }
+
+  // generate PIN
+  const pin = (typeof generate4DigitPin === 'function') ? generate4DigitPin() : Math.floor(1000 + Math.random()*9000);
+
+  // helper to convert a single file input to base64 (returns promise)
+  function fileInputToBase64Promise(inputEl){
+    return new Promise((resolve) => {
+      if(!inputEl || !inputEl.files || inputEl.files.length === 0) return resolve(null);
+      const f = inputEl.files[0];
+      if(typeof fileToBase64 === 'function'){
+        fileToBase64(f, (dataUrl)=> resolve({ name: f.name, data: dataUrl }));
+      } else {
+        const reader = new FileReader();
+        reader.onload = (e)=> resolve({ name: f.name, data: e.target.result });
+        reader.onerror = ()=> resolve(null);
+        reader.readAsDataURL(f);
+      }
+    });
+  }
+
+  // helper for multiple files
+  function filesInputToArrayPromise(inputEl){
+    return new Promise((resolve) => {
+      if(!inputEl || !inputEl.files || inputEl.files.length === 0) return resolve([]);
+      const arr = Array.from(inputEl.files);
+      const out = [];
+      let i = 0;
+      function next(){
+        if(i >= arr.length) return resolve(out);
+        const f = arr[i++];
+        if(typeof fileToBase64 === 'function'){
+          fileToBase64(f, (dataUrl)=>{ out.push({name:f.name,data:dataUrl}); next(); });
+        } else {
+          const reader = new FileReader();
+          reader.onload = (e)=>{ out.push({name:f.name,data:e.target.result}); next(); };
+          reader.onerror = ()=>{ next(); };
+          reader.readAsDataURL(f);
+        }
+      }
+      next();
+    });
+  }
+
+  // convert files
+  const tenthMarksheetData = await fileInputToBase64Promise(tenthFileInput);
+  const interMarksheetData = await fileInputToBase64Promise(interFileInput);
+  const gradMarksheetData = await fileInputToBase64Promise(gradFileInput);
+  const certificates = await filesInputToArrayPromise(certInput);
+
+  // compute Year label if needed (reuse helpers if present)
+  let yearLabel = (safeGet('studentYear') && safeGet('studentYear').value) || '';
+  if(course === 'BTECH' && admissionYearVal){
+    try{
+      const acadStart = typeof currentAcademicYearStart === 'function' ? currentAcademicYearStart() : (new Date()).getFullYear();
+      let yearNum = acadStart - admissionYearVal + 1;
+      if(yearNum < 1) yearNum = 1;
+      if(yearNum > 4) yearNum = 4;
+      yearLabel = typeof yearNumberToLabel === 'function' ? yearNumberToLabel(yearNum) : yearNum + 'th Year';
+    }catch(e){}
+  }
+
+  // build student object
+  const s = {
+    roll, name, course, branch, admissionYear: admissionYearVal, year: yearLabel, class: classVal, dob,
+    parentPhone, emergencyContact, address, photo: photoData, pin,
+    mobile: studentMobile, email: studentEmail, gender, aadhaar,
+    bloodGroup, hostelStatus, category, transport, guardianName, admissionNo, medicalInfo,
+    // academic records
+    tenth: { board: tenthBoard, year: tenthYear, percentage: tenthPercentage, marksheet: tenthMarksheetData },
+    inter: { board: interBoard, year: interYear, percentage: interPercentage, marksheet: interMarksheetData },
+    graduate: { degree: gradDegree, year: gradYear, percentage: gradPercentage, marksheet: gradMarksheetData },
+    certificates: certificates, // array of {name,data}
+    createdAt: new Date().toISOString()
+  };
+
+  // save and refresh
+  students.push(s);
+  try{ saveToStorage(); }catch(e){ console.error('save error', e); }
+  renderDashboard(); renderEdit(); populateAttendanceReportFilters(); renderAttendanceTable();
+  clearStudentForm && clearStudentForm();
+
+  toast('Student added — PIN: ' + pin, 'bg-green-600');
+}
+
+
+function fileToBase64(file, cb){
+  if(!file) return cb(null);
+  const reader = new FileReader();
+  reader.onload = e => cb(e.target.result);
+  reader.onerror = () => cb(null);
+  reader.readAsDataURL(file);
+}
+
+(function(){
+  const el = document.getElementById('studentPhoto') || document.querySelector('[id="studentPhoto"]');
+  if(!el) return;
+  el.addEventListener('change', function(e){
+    const f = e.target.files && e.target.files[0];
+    const prev = document.getElementById('studentPhotoPreview') || document.querySelector('[id="studentPhotoPreview"]');
+    if(!f){ if(prev){ prev.style.display='none'; prev.src=''; delete prev.dataset.base64; } return; }
+    if(typeof fileToBase64 === 'function'){
+      fileToBase64(f, function(dataUrl){
+        if(dataUrl && prev){ prev.src = dataUrl; prev.style.display='block'; prev.dataset.base64 = dataUrl; }
+      });
+    } else {
+      const reader = new FileReader();
+      reader.onload = function(ev){ if(prev){ prev.src = ev.target.result; prev.style.display='block'; prev.dataset.base64 = ev.target.result; } };
+      reader.readAsDataURL(f);
+    }
+  });
+})();
+
+
+function showStudentPin(i){
+  const s = students[i]; if(!s){ toast('Student not found','bg-red-600'); return; }
+  const pin = s.pin || '—';
+  try{ navigator.clipboard.writeText(String(pin)); toast('PIN copied to clipboard: '+pin, 'bg-blue-600'); }catch(e){ toast('PIN: '+pin,'bg-blue-600'); }
+  if(typeof openEditModalForStudent === 'function'){
+    openEditModalForStudent(i);
+    setTimeout(()=>{ const el = safeGet('editModalBody'); if(el){ const extra = document.createElement('div'); extra.className='p-2 mt-2 bg-gray-50 rounded text-sm'; extra.innerText='PIN: '+pin; el.appendChild(extra); } }, 120);
+  }
+}
+
+function regenerateStudentPin(i){
+  if(typeof i === 'undefined'){ toast('Missing student index','bg-red-600'); return; }
+  if(!confirm('Regenerate PIN for this student? This will replace the existing PIN.')) return;
+  const s = students[i];
+  if(!s) { toast('Student not found','bg-red-600'); return; }
+  const newPin = (typeof generate4DigitPin === 'function') ? generate4DigitPin() : Math.floor(1000 + Math.random()*9000);
+  s.pin = newPin;
+  try{ saveToStorage(); }catch(e){}
+  renderEdit(); renderDashboard();
+  try{ navigator.clipboard.writeText(String(newPin)); toast('New PIN generated and copied: '+newPin,'bg-green-600'); }catch(e){ toast('New PIN: '+newPin,'bg-green-600'); }
+}
+
+function setStudentPin(i){
+  const s = students[i];
+  if(!s){ toast('Student not found','bg-red-600'); return; }
+  const val = prompt('Enter new 4-digit PIN for '+(s.name||s.roll), s.pin || '');
+  if(val === null) return;
+  if(!/^\d{4}$/.test(val)){ toast('PIN must be 4 digits','bg-red-600'); return; }
+  s.pin = val;
+  try{ saveToStorage(); }catch(e){}
+  renderEdit(); renderDashboard();
+  toast('PIN updated','bg-green-600');
+}
+
+
+// Robust auto-year calculation + wiring for student form
+(function robustAutoYearForStudentForm(){
+  function currentAcademicYearStart(){
+    const now = new Date(); const y = now.getFullYear(); const m = now.getMonth() + 1;
+    return (m >= 6) ? y : (y - 1);
+  }
+  function yearNumberToLabel(n){
+    if(!n || n <= 0) return ''; if(n === 1) return '1st Year'; if(n === 2) return '2nd Year'; if(n === 3) return '3rd Year'; return '4th Year';
+  }
+  function sg(id){
+    if(typeof safeGet === 'function') { try{ const e = safeGet(id); if(e) return e; }catch(e){} }
+    return document.getElementById(id) || document.querySelector('[id="'+id+'"]') || null;
+  }
+  function computeYearLabel(admissionYear){
+    if(!admissionYear || isNaN(admissionYear)) return '';
+    const acadStart = currentAcademicYearStart();
+    let yearNum = acadStart - parseInt(admissionYear,10) + 1;
+    if(yearNum < 1) yearNum = 1; if(yearNum > 4) yearNum = 4;
+    return yearNumberToLabel(yearNum);
+  }
+  function ensureOptionInSelect(sel, label){
+    if(!sel || !label) return;
+    for(let i=0;i<sel.options.length;i++){ if(sel.options[i].value === label || sel.options[i].text === label) return; }
+    const o = document.createElement('option'); o.value = label; o.textContent = label; sel.appendChild(o);
+  }
+  function updateStudentYearAutoOnce(){
+    const courseEl = sg('studentCourse'); const ayEl = sg('studentAdmissionYear'); const yearSel = sg('studentYear');
+    if(!yearSel) return false;
+    const course = courseEl ? (courseEl.value || '') : ''; const ayVal = ayEl ? (ayEl.value || '') : '';
+    const admissionYearVal = ayVal ? parseInt(ayVal,10) : null;
+    if(course === 'BTECH' && admissionYearVal && !isNaN(admissionYearVal)){
+      const label = computeYearLabel(admissionYearVal);
+      if(label){
+        ensureOptionInSelect(yearSel, label);
+        if(!yearSel._manuallySet && yearSel.value !== label){ yearSel.value = label; try{ if(typeof toast === 'function') toast('Year auto-set: '+label, 'bg-blue-600'); }catch(e){} }
+        yearSel.disabled = true;
+      }
+    } else { if(yearSel.disabled) yearSel.disabled = false; }
+    return true;
+  }
+  function attachListenersWhenReady(){
+    const courseEl = sg('studentCourse'); const ayEl = sg('studentAdmissionYear'); const yearSel = sg('studentYear');
+    if(!yearSel) return false;
+    if(!yearSel._autoYearAttached){
+      if(courseEl) courseEl.addEventListener('change', updateStudentYearAutoOnce);
+      if(ayEl) ayEl.addEventListener('input', updateStudentYearAutoOnce);
+      yearSel.addEventListener('change', ()=>{ yearSel._manuallySet = true; });
+      yearSel._autoYearAttached = true;
+      setTimeout(updateStudentYearAutoOnce, 50);
+    }
+    return true;
+  }
+  let tries = 0; const maxTries = 50;
+  const poll = setInterval(()=>{ tries++; if(attachListenersWhenReady() || tries >= maxTries){ clearInterval(poll); } }, 100);
+  const observer = new MutationObserver((mutList)=>{ if(attachListenersWhenReady()){ try{ observer.disconnect(); }catch(e){} } });
+  observer.observe(document.body, { childList:true, subtree:true });
+  window.forceUpdateStudentYearAuto = updateStudentYearAutoOnce;
+})();
+
+
+/* ---------- Clear form helpers ---------- */
+function clearTeacherForm(){
+  ['teacherName','teacherGender','teacherDOB','teacherMobile','teacherEmail','teacherAddress','teacherEmpID','teacherDepartment','teacherDesignation','teacherQualification','teacherExperience','teacherJoiningDate','teacherSubjects','teacherEmergencyContact','teacherPhotoPreview','teacherUsername','teacherPassword','teacherPin','teacherContractType','teacherEmploymentStatus','teacherAppointmentType','teacherGrade','teacherSalary','teacherProbationEnd','teacherPF','teacherESI','teacherBankName','teacherIFSC','teacherAccountNumber','teacherTaxId','teacherAadhaar','teacherPreviousEmployers','teacherPublications','teacherAwards','teacherResumeName','teacherBio','teacherLinkedIn','teacherResearchGate','teacherGoogleScholar'].forEach(id => {
+    const el = safeGet(id);
+    if(!el) return;
+    if(el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA') el.value = '';
+    if(el.tagName === 'IMG'){ el.style.display='none'; el.src=''; delete el.dataset.base64; }
+  });
+  const hod = safeGet('teacherIsHod'); if(hod) hod.checked = false;
+  if(safeGet('teacherResume')) { delete safeGet('teacherResume').dataset.base64; safeGet('teacherResumeName').innerText=''; }
+}
+function clearStudentForm(){
+  ['studentName','studentRoll','studentCourse','studentBranch','studentAdmissionYear','studentYear','studentClass','studentDOB','studentMobile','studentEmail','studentParentPhone','studentAddress','studentPhotoPreview','studentPin'].forEach(id => {
+    const el = safeGet(id);
+    if(!el) return;
+    if(el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA') el.value = '';
+    if(el.tagName === 'IMG'){ el.style.display='none'; el.src=''; delete el.dataset.base64; }
+  });
+}
+
+/* ---------- Start / splash handling ---------- */
+(function initApp(){
+  // splash progress
+  const progress = safeGet('progress');
+  const splash = safeGet('splash');
+  const loginScreen = safeGet('loginScreen');
+  // animate progress to full in 700ms then show login
+  if(progress) {
+    setTimeout(()=>{ progress.style.width = '30%'; }, 80);
+    setTimeout(()=>{ progress.style.width = '60%'; }, 300);
+    setTimeout(()=>{ progress.style.width = '90%'; }, 560);
+    setTimeout(()=>{ progress.style.width = '100%'; }, 760);
+  }
+  setTimeout(()=>{
+    if(splash) splash.style.opacity = '0';
+    setTimeout(()=>{ if(splash) splash.style.display = 'none'; if(loginScreen) loginScreen.classList.remove('hidden'); }, 500);
+    renderDashboard(); renderEdit(); renderRequestsInitial(); populateAttendanceReportFilters();
+  }, 1200);
+})();
+
+/* ---------- Expose a few functions to console for debugging ---------- */
+window.MJ = {
+  teachers, students, requests, smsLogs, attendanceRecords,
+  saveToStorage, loadFromStorage, exportAppState, importAppStateFromFilePrompt, ensurePinsForAllUsers
+};
+
+
+// --- Student PIN utilities (show, regenerate, set) ---
+function showStudentPin(i){
+  const s = students[i];
+  if(!s){ toast('Student not found','bg-red-600'); return; }
+  const pin = s.pin || '—';
+  // copy to clipboard
+  try{ navigator.clipboard.writeText(String(pin)); toast('PIN copied to clipboard: '+pin, 'bg-blue-600'); }catch(e){ toast('PIN: '+pin,'bg-blue-600'); }
+  // also open a small modal if you have edit modal
+  if(typeof openEditModalForStudent === 'function'){
+    openEditModalForStudent(i);
+    setTimeout(()=>{ const el = safeGet('editModalBody'); if(el){ const extra = document.createElement('div'); extra.className='p-2 mt-2 bg-gray-50 rounded text-sm'; extra.innerText='PIN: '+pin; el.appendChild(extra); } }, 120);
+  }
+}
+
+function regenerateStudentPin(i){
+  if(typeof i === 'undefined'){ toast('Missing student index','bg-red-600'); return; }
+  if(!confirm('Regenerate PIN for this student? This will replace the existing PIN.')) return;
+  const s = students[i];
+  if(!s) { toast('Student not found','bg-red-600'); return; }
+  const newPin = (typeof generate4DigitPin === 'function') ? generate4DigitPin() : Math.floor(1000 + Math.random()*9000);
+  s.pin = newPin;
+  try{ saveToStorage(); }catch(e){}
+  renderEdit(); renderDashboard();
+  try{ navigator.clipboard.writeText(String(newPin)); toast('New PIN generated and copied: '+newPin,'bg-green-600'); }catch(e){ toast('New PIN: '+newPin,'bg-green-600'); }
+}
+
+function setStudentPin(i){
+  const s = students[i];
+  if(!s){ toast('Student not found','bg-red-600'); return; }
+  const val = prompt('Enter new 4-digit PIN for '+(s.name||s.roll), s.pin || '');
+  if(val === null) return;
+  if(!/^\d{4}$/.test(val)){ toast('PIN must be 4 digits','bg-red-600'); return; }
+  s.pin = val;
+  try{ saveToStorage(); }catch(e){}
+  renderEdit(); renderDashboard();
+  toast('PIN updated','bg-green-600');
+}
+
+// Helper: expose get/set by roll
+function getStudentPinByRoll(roll){
+  const s = students.find(x=> (x.roll||'') === roll);
+  return s ? (s.pin || null) : null;
+}
+function setStudentPinByRoll(roll, newPin){
+  const s = students.find(x=> (x.roll||'') === roll);
+  if(!s) return false;
+  s.pin = newPin; try{ saveToStorage(); }catch(e){}; renderEdit(); renderDashboard(); return true;
+}
+
 </script>
 </body>
 </html>
